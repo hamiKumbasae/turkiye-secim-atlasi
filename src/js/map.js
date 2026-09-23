@@ -1,0 +1,416 @@
+  // ---------------- map projection ----------------
+  const VB_W = 900, VB_H = 420, PAD = 14;
+  const NS='http://www.w3.org/2000/svg';
+
+  function computeProjection(features, pad){
+    let lonMin=1e9,lonMax=-1e9,latMin=1e9,latMax=-1e9;
+    function walk(coords, depth){
+      if(depth===1){
+        const [lon,lat]=coords;
+        if(lon<lonMin)lonMin=lon; if(lon>lonMax)lonMax=lon;
+        if(lat<latMin)latMin=lat; if(lat>latMax)latMax=lat;
+      } else { for(const c of coords) walk(c, depth-1); }
+    }
+    for(const f of features){
+      const depth = f.geometry.type==='Polygon' ? 3 : 4;
+      walk(f.geometry.coordinates, depth);
+    }
+    const latMid = (latMin+latMax)/2 * Math.PI/180;
+    const cosLat = Math.cos(latMid);
+    const lonSpan = Math.max((lonMax-lonMin)*cosLat, 1e-6), latSpan = Math.max(latMax-latMin, 1e-6);
+    const availW = VB_W-2*pad, availH = VB_H-2*pad;
+    const scale = Math.min(availW/lonSpan, availH/latSpan);
+    const usedW = lonSpan*scale, usedH = latSpan*scale;
+    const offX = pad + (availW-usedW)/2, offY = pad + (availH-usedH)/2;
+    function project([lon,lat]){
+      const x = offX + (lon-lonMin)*cosLat*scale;
+      const y = offY + (latMax-lat)*scale;
+      return [x.toFixed(2), y.toFixed(2)];
+    }
+    return project;
+  }
+  function ringToPath(project, ring){ return ring.map((pt,i)=> (i===0?'M':'L')+project(pt).join(',')).join('')+'Z'; }
+  function geomToPath(project, geom){
+    if(geom.type==='Polygon') return geom.coordinates.map(r=>ringToPath(project,r)).join(' ');
+    return geom.coordinates.map(poly=>poly.map(r=>ringToPath(project,r)).join(' ')).join(' ');
+  }
+
+  const svg = $('#mapSvg');
+  let countryProject = computeProjection(GEO.features, PAD);
+  let pathByPlaka = {};
+  let pathByGeomId = {};
+  let view = {level:'country', plaka:null};
+  let currentMapMode = 'winner'; // 'winner' | 'katilim' | 'parti'
+  let currentMapParty = null;
+
+  // ---------------- tarihsel idari sinirlar (sonradan il olan ilceler) ----------------
+  // Ardahan/Igdir (1992), Aksaray/Bayburt/Karaman/Kirikkale/Batman/Sirnak/Bartin (1989-91),
+  // Karabuk/Kilis/Yalova (1995), Osmaniye (1996), Sakarya/Adiyaman/Nevsehir (1954),
+  // Usak (1954) ve Duzce (1999) o yillarda henuz bagimsiz il degildi - o donemin secim
+  // haritasinda bos/gri gorunmemeleri icin kendi donemlerinde ait olduklari ile
+  // birlestirilmis ozel bir GeoJSON kullaniliyor (bkz. build_historical_geo.py).
+  const GEO_ERAS = [ // [esik_yili, dosya_eki] - yil < esik_yili ise bu era kullanilir
+    [1954, 'era1950'], [1957, 'era1954'], [1991, 'era1957_1987'],
+    [1995, 'era1991'], [1999, 'era1995'], [2002, 'era1999'],
+  ];
+  function eraSuffixForYear(year){
+    const y = parseInt(String(year).match(/^\d{4}/)[0], 10);
+    for(const [threshold, suffix] of GEO_ERAS){ if(y < threshold) return suffix; }
+    return null; // 2002+ -> modern (GEO_MODERN), birlestirme gerekmiyor
+  }
+  const GEO_MODERN = GEO;
+  const geoEraCache = {};
+  let currentGeoEra = null;
+  async function ensureGeoForYear(year){
+    const suffix = eraSuffixForYear(year);
+    if(suffix === currentGeoEra) return;
+    currentGeoEra = suffix;
+    if(suffix === null){
+      GEO = GEO_MODERN;
+    } else if(geoEraCache[suffix]){
+      GEO = geoEraCache[suffix];
+    } else {
+      GEO = await fetchJSON("geo/eras/"+suffix+".geojson");
+      geoEraCache[suffix] = GEO;
+    }
+    countryProject = computeProjection(GEO.features, PAD);
+  }
+
+  // 2024 yerel seciminde ilce meclisi verisi olan 4 buyuksehir - artik bir
+  // harita modu degil, sag paneldeki "İlçe Meclisi" gorunum sekmesinin hangi
+  // illerde gorunecegini belirlemek icin detail-panel.js tarafindan kullaniliyor.
+  const MECLIS_PROVINCES = new Set([34,35,6,16]);
+
+  // ---------------- harita modu / parti secici ----------------
+  function populatePartySelect(){
+    const sel = $('#partySelect'); sel.innerHTML='';
+    for(const name of MAJOR){
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = PARTY[name] ? PARTY[name].short : name;
+      sel.appendChild(opt);
+    }
+    currentMapParty = MAJOR[0] || null;
+    sel.value = currentMapParty;
+  }
+  function setMapMode(mode){
+    currentMapMode = mode;
+    $$('#modeGroup button').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
+    $('#partySelect').style.display = mode==='parti' ? '' : 'none';
+    applyMapMode();
+  }
+  // council_seats/mixed (1950/1955 yerel): oy oranlari ile sandalye paylari
+  // AYNI renk skalasinda karsilastirilamaz (biri gercek oy yuzdesi, digeri
+  // meclis sandalye payi) - v1 icin bu sadece "Parti" modunu bu yillarda
+  // gizler (bkz. son inceleme), yeni bir "Meclis Payı" modu EKLEMEZ.
+  function partiModeAvailable(){
+    return DATA.resultBasis !== 'council_seats' && DATA.resultBasis !== 'mixed';
+  }
+  function resetMapModeUI(){
+    populatePartySelect();
+    $('#modeGroup button[data-mode="parti"]').hidden = !partiModeAvailable();
+    setMapMode('winner');
+  }
+  $$('#modeGroup button').forEach(b=>{
+    b.addEventListener('click', ()=> setMapMode(b.dataset.mode));
+  });
+  $('#partySelect').addEventListener('change', e=>{ currentMapParty = e.target.value; applyMapMode(); });
+
+  // hex/renk stringini hue'ya cevirir (parti oran gradyani icin) - canvas
+  // normalizasyonu kullanir, boylece partiler.json'daki her renk formati
+  // (hex, rgb, isim) guvenilir sekilde HSL hue'ya donusur.
+  let _hueCanvasCtx = null;
+  function colorToHue(colorStr){
+    if(!_hueCanvasCtx) _hueCanvasCtx = document.createElement('canvas').getContext('2d');
+    _hueCanvasCtx.fillStyle = '#000'; _hueCanvasCtx.fillStyle = colorStr;
+    const norm = _hueCanvasCtx.fillStyle;
+    if(!norm.startsWith('#') || norm.length<7) return 210;
+    const r = parseInt(norm.slice(1,3),16)/255, g = parseInt(norm.slice(3,5),16)/255, b = parseInt(norm.slice(5,7),16)/255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b);
+    let h=0;
+    if(max!==min){
+      const d = max-min;
+      if(max===r) h = ((g-b)/d + (g<b?6:0));
+      else if(max===g) h = (b-r)/d + 2;
+      else h = (r-g)/d + 4;
+      h *= 60;
+    }
+    return Math.round(h);
+  }
+
+  function renderWinnerLegend(entities){
+    const counts = {};
+    for(const e of entities){ if(e.kazanan) counts[e.kazanan] = (counts[e.kazanan]||0)+1; }
+    const names = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+    const wrap = $('#winnerLegend');
+    if(!names.length){ wrap.innerHTML=''; return; }
+    wrap.innerHTML = names.map(n=>
+      '<span class="wl-item"><span class="swatch" style="background:'+partyColor(n)+'"></span>'+(PARTY[n]?PARTY[n].short:n)+'</span>'
+    ).join('');
+  }
+
+  function renderCountryMap(){
+    view = {level:'country', plaka:null};
+    svg.innerHTML = '';
+    pathByPlaka = {}; pathByGeomId = {};
+    for(const f of GEO.features){
+      const plaka = f.properties.plaka;
+      const el = document.createElementNS(NS,'path');
+      el.setAttribute('d', geomToPath(countryProject, f.geometry));
+      el.setAttribute('class','il-path');
+      el.dataset.plaka = plaka;
+      el.addEventListener('mousemove', e=>showTooltip(e, {kind:'il', plaka}));
+      el.addEventListener('mouseleave', hideTooltip);
+      el.addEventListener('click', ()=>goToProvince(plaka));
+      svg.appendChild(el);
+      pathByPlaka[plaka]=el;
+    }
+    $('#mapBreadcrumb').style.display='none';
+    $('#mapTitleCountry').style.display='block';
+    $('#searchBox').placeholder='İl ara…';
+    applyMapMode();
+  }
+
+  // Ucuz, senkron on-kontrol: bu ilcenin HIC mahalle poligonu var mi (yildan
+  // bagimsiz, MAHALLE_GEO hep eager yuklu). Gercek oy verisi (yil bazli,
+  // lazy) icin mahalleDataForDistrict'i await edin.
+  function mahalleGeoExistsForDistrict(geomId){
+    return !!MAHALLE_GEO[geomId];
+  }
+
+  async function mahalleDataForDistrict(geomId){
+    const geoRows = MAHALLE_GEO[geomId];
+    if(!geoRows) return null;
+    const votesForYear = await loadMahalleVotesForYear(currentYear);
+    const voteRows = votesForYear[geomId];
+    if(!voteRows) return null;
+    const rows = [];
+    for(const osmId in voteRows){
+      const g = geoRows[osmId]; if(!g) continue;
+      const v = voteRows[osmId];
+      rows.push({id:osmId, ad:g.ad, geometry:g.geometry, secmen:v.secmen, sandik:v.sandik, katilim:v.katilim, kazanan:v.kazanan, oy:v.oy});
+    }
+    return rows.length ? rows : null;
+  }
+
+  // Bir kac secili (simdilik SADECE tek-ebeveynli, yuksek-guven arastirmayla
+  // dogrulanmis) ilce icin gercek tarihsel poligon birlesimi var (bkz.
+  // geo/historical/district_splits.json + turkiye_ilce_sinirlari_hist_splits.geojson,
+  // orn. HIST-Istanbul-Buyukcekmece = Buyukcekmece+Beylikduzu). Bu secimde
+  // o birlesik (sentetik) id GERCEKTEN kullanildiysa (veri satirinin geomId'si
+  // ona esitse), birlesimin PARCASI olan modern id'leri (orn. Beylikduzu'nun
+  // kendi modern poligonu) AYRICA "veri yok" katmaninda gostermiyoruz -
+  // yoksa ayni alan iki kez (bir kere dogru renkli birlesim, bir kere de
+  // notr/gri kendi parcasi olarak) cizilmis olur.
+  function hiddenModernIdsForProvince(plaka, dataGeomIds){
+    const hidden = new Set();
+    const splits = DISTRICT_SPLITS[String(plaka)] || [];
+    for(const entry of splits){
+      if(dataGeomIds.has(entry.syntheticId)){
+        for(const hid of entry.hideIds) hidden.add(hid);
+      }
+    }
+    return hidden;
+  }
+
+  function renderProvinceMap(plaka){
+    view = {level:'province', plaka};
+    const allDataFeats = districtFeaturesForProvince(plaka);
+    // Sadece GERCEKTEN sonucu olan ilceler tiklanabilir/etkilesimli olsun (bkz.
+    // son inceleme: veri olmayan yerde yaniltici bir "tiklama alani" gorunmemeli).
+    const dataFeats = allDataFeats.filter(f => districtHasRealData(districtByGeomId[f.properties.id]));
+    const dataGeomIds = new Set(dataFeats.map(f=>f.properties.id));
+    const hiddenByMerge = hiddenModernIdsForProvince(plaka, dataGeomIds);
+    // Bu ilin GUNCEL (modern) tum ilce sinirlari - SADECE bu il/yil icin
+    // GERCEKTEN kismi ilce verisi varsa (dataFeats.length>0, yani bazi
+    // ilceler biliniyor bazilari bilinmiyor) devreye girer: bilinmeyenleri
+    // notr/TIKLANAMAZ bir alt katman olarak gosterir (orn. 2008 oncesi
+    // Istanbul'da Ataşehir/Sancaktepe vb.) - BILEREK gercek tarihsel
+    // sinirlari "uydurmuyor". Eger bu il/yil icin HIC ilce verisi yoksa
+    // (dataFeats bos - orn. 1950-1977/1983-1987 genel, sadece il-duzeyi
+    // kaynak), bu katman HIC HESAPLANMAZ/GOSTERILMEZ - asagidaki "tek
+    // parca il" fallback'i kullanilir (bkz. son inceleme: bilmedigimiz
+    // bir seyi 39 parcaya bolup "veri yok" diye gostermek de yaniltici -
+    // sadece GERCEKTEN KISMEN bildigimiz durumlarda parcali gosterim yapilir).
+    const modernFeats = dataFeats.length ? GEO_ILCE.features.filter(f=>f.properties.plaka===plaka) : [];
+    const noDataFeats = modernFeats.filter(f=>!dataGeomIds.has(f.properties.id) && !hiddenByMerge.has(f.properties.id));
+    const fallbackFeats = GEO.features.filter(f=>f.properties.plaka===plaka);
+    const allFeats = dataFeats.length ? [...dataFeats, ...noDataFeats] : fallbackFeats;
+    const project = computeProjection(allFeats.length?allFeats:fallbackFeats, PAD);
+    svg.innerHTML = '';
+    pathByPlaka = {}; pathByGeomId = {};
+    if(!dataFeats.length){
+      // Bu yil icin ilce verisi hic yok - il sinirini tek parca olarak,
+      // ilin kendi kazanan rengiyle goster.
+      const p = ilByPlaka[plaka];
+      for(const f of fallbackFeats){
+        const el = document.createElementNS(NS,'path');
+        el.setAttribute('d', geomToPath(project, f.geometry));
+        el.setAttribute('class','il-path');
+        el.setAttribute('fill', p && p.kazanan ? partyColor(p.kazanan) : 'var(--map-empty)');
+        el.dataset.plaka = plaka;
+        el.addEventListener('mousemove', e=>showTooltip(e, {kind:'il', plaka}));
+        el.addEventListener('mouseleave', hideTooltip);
+        svg.appendChild(el);
+        pathByPlaka[plaka]=el;
+      }
+    }
+    for(const f of noDataFeats){
+      const geomId = f.properties.id;
+      const el = document.createElementNS(NS,'path');
+      el.setAttribute('d', geomToPath(project, f.geometry));
+      el.setAttribute('class','il-path il-path-nodata');
+      el.setAttribute('fill','var(--map-empty)');
+      el.dataset.geomId = geomId;
+      el.addEventListener('mousemove', e=>{
+        const d = districtByGeomId[geomId];
+        tip.innerHTML = '<b>'+(d?d.ad:'')+'</b><div class="row"><span>Bu dönem için veri yok</span></div>';
+        positionTip(e);
+      });
+      el.addEventListener('mouseleave', hideTooltip);
+      svg.appendChild(el);
+      pathByGeomId[geomId]=el;
+    }
+    for(const f of dataFeats){
+      const geomId = f.properties.id;
+      const el = document.createElementNS(NS,'path');
+      el.setAttribute('d', geomToPath(project, f.geometry));
+      el.setAttribute('class','il-path');
+      el.dataset.geomId = geomId;
+      el.addEventListener('mousemove', e=>showTooltip(e, {kind:'ilce', plaka, geomId}));
+      el.addEventListener('mouseleave', hideTooltip);
+      el.addEventListener('click', async ()=>{
+        const d = districtByGeomId[geomId];
+        // Mahalle haritasina inerken bile once ilcenin KENDI verisini panelde
+        // goster (bkz. son inceleme: tiklama, eski/genel veriyi degil TIKLANAN
+        // yerin verisini gostermeli) - kullanici sonra istedigi mahalleye
+        // tiklayip daha da detaya inebilir.
+        if(d) selectDistrict(d, plaka);
+        if(mahalleGeoExistsForDistrict(geomId)){
+          const rows = await mahalleDataForDistrict(geomId);
+          if(rows){ renderMahalleMap(plaka, geomId, rows); return; }
+        }
+      });
+      svg.appendChild(el);
+      pathByGeomId[geomId]=el;
+    }
+    const p = ilByPlaka[plaka];
+    $('#mapBreadcrumb').style.display='flex';
+    $('#btnBackProvince').style.display='none';
+    $('#mapTitleCountry').style.display='none';
+    $('#mapBreadcrumbName').textContent = p ? (p.ad+' — İlçe Sonuçları') : '';
+    $('#searchBox').value='';
+    $('#searchBox').placeholder='İlçe ara…';
+    applyMapMode();
+  }
+
+  function drillIntoProvince(plaka){
+    renderProvinceMap(plaka);
+    selectProvince(plaka);
+  }
+
+  // Tiklanan/aranan ile HANGI gorunume gidilecegini tek yerden karar verir:
+  // ilce verisi varsa normal ilce-haritasina in (drillIntoProvince); yoksa
+  // (o il/yil icin hic ilce-duzeyi veri bilmiyorsak) HARITA ulke goruminde
+  // KALIR - olmayan bir "ilce gorunumu"ne (39/81 parcali ya da tek-parca-il
+  // gosterip "İlçe Sonuçları" baslikli sahte bir alt seviye) hic gecilmez,
+  // sadece sag panelde ilin kendi sonucu gosterilir (bkz. son inceleme).
+  function goToProvince(plaka){
+    if(provinceHasDistrictData(plaka)){
+      drillIntoProvince(plaka);
+    } else {
+      if(view.level!=='country') renderCountryMap();
+      selectProvince(plaka);
+    }
+  }
+
+  // ---------------- mahalle (ilce icinde ucuncu seviye) ----------------
+  let currentMahalleRows = [];
+  let pathByMahalleId = {};
+
+  // rows: mahalleDataForDistrict(geomId)'nin (async, cagiran yerde await
+  // edilmis) sonucu — burada tekrar hesaplanmiyor, cagri yerinde (renderProvinceMap'in
+  // click handler'i) zaten cozulmus olarak veriliyor.
+  function renderMahalleMap(plaka, geomId, rows){
+    if(!rows || !rows.length) return;
+    view = {level:'mahalle', plaka, geomId};
+    currentMahalleRows = rows;
+    const feats = rows.map(r=>({geometry:r.geometry}));
+    const project = computeProjection(feats, PAD);
+    svg.innerHTML = '';
+    pathByMahalleId = {};
+    for(const r of rows){
+      const el = document.createElementNS(NS,'path');
+      el.setAttribute('d', geomToPath(project, r.geometry));
+      el.setAttribute('class','il-path');
+      el.dataset.mahalleId = r.id;
+      el.addEventListener('mousemove', e=>showTooltip(e, {kind:'mahalle', mahalleId:r.id}));
+      el.addEventListener('mouseleave', hideTooltip);
+      el.addEventListener('click', ()=>selectMahalle(r, plaka, geomId));
+      svg.appendChild(el);
+      pathByMahalleId[r.id]=el;
+    }
+    const d = districtByGeomId[geomId];
+    const p = ilByPlaka[plaka];
+    $('#mapBreadcrumb').style.display='flex';
+    $('#btnBackProvince').style.display='inline-flex';
+    $('#mapTitleCountry').style.display='none';
+    $('#mapBreadcrumbName').textContent = (p?p.ad:'')+' — '+(d?d.ad:'')+' — Mahalle Sonuçları';
+    $('#searchBox').value='';
+    $('#searchBox').placeholder='Mahalle ara…';
+    applyMapMode();
+  }
+
+  // ---------------- map coloring modes ----------------
+  function seqColor(t, hue){
+    // t in [0,1] -> light..dark single-hue ramp
+    const dark = document.documentElement.getAttribute('data-theme')==='dark' ||
+      (document.documentElement.getAttribute('data-theme')!=='light' && matchMedia('(prefers-color-scheme: dark)').matches);
+    const l = dark ? (78 - t*45) : (92 - t*52);
+    const s = dark ? 55 : 60;
+    return 'hsl('+hue+' '+s+'% '+l+'%)';
+  }
+  function applyMapMode(){
+    const mode = currentMapMode;
+    $('#seqLegendWrap').style.display = (mode==='winner') ? 'none' : 'flex';
+    const entities = view.level==='country' ? DATA.iller : (view.level==='mahalle' ? currentMahalleRows : (districtsByPlaka[view.plaka]||[]));
+    const pathFor = view.level==='country' ? (e=>pathByPlaka[e.plaka])
+      : (view.level==='mahalle' ? (e=>pathByMahalleId[e.id]) : (e=>e.geomId && pathByGeomId[e.geomId]));
+
+    if(mode==='winner'){
+      for(const e of entities){
+        const el = pathFor(e); if(!el) continue;
+        el.setAttribute('fill', e.kazanan ? partyColor(e.kazanan) : 'var(--map-empty)');
+      }
+      // districts with geometry but no matched vote row -> neutral fill
+      if(view.level==='province'){
+        for(const [gid, el] of Object.entries(pathByGeomId)){
+          if(!districtByGeomId[gid]) el.setAttribute('fill','var(--map-empty)');
+        }
+      }
+      renderWinnerLegend(entities);
+      return;
+    }
+    $('#winnerLegend').innerHTML='';
+    let key, hue;
+    if(mode==='parti'){ key = currentMapParty; hue = key ? colorToHue(partyColor(key)) : 210; }
+    else { key=null; hue=210; }
+    const noKatilimData = !key && entities.every(e => e.katilim==null);
+    let vals = entities.map(e => key ? (resultPercent(e.oy[key]) ?? 0) : (e.katilim!=null?e.katilim:0));
+    const vmin = Math.min(...vals), vmax = Math.max(...vals);
+    $('#seqMin').textContent = noKatilimData ? '—' : (vmin||0).toFixed(2)+'%';
+    $('#seqMax').textContent = noKatilimData ? '—' : (vmax||0).toFixed(2)+'%';
+    $('#seqRamp').style.background = 'linear-gradient(90deg,'+seqColor(0,hue)+','+seqColor(1,hue)+')';
+    for(const e of entities){
+      const el = pathFor(e); if(!el) continue;
+      if(noKatilimData){ el.setAttribute('fill','var(--map-empty)'); continue; }
+      const v = key ? (resultPercent(e.oy[key]) ?? 0) : (e.katilim!=null?e.katilim:0);
+      const t = vmax>vmin ? (v-vmin)/(vmax-vmin) : 0.5;
+      el.setAttribute('fill', seqColor(t,hue));
+    }
+    if(view.level==='province'){
+      for(const [gid, el] of Object.entries(pathByGeomId)){
+        if(!districtByGeomId[gid]) el.setAttribute('fill','var(--map-empty)');
+      }
+    }
+  }
+
