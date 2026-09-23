@@ -32,10 +32,9 @@
     loadYear(TUR_YEARS[tur][0]);
   }
 
-  // Veri artik fetch ile (async) geldigi icin, kullanici hizlica iki yila
-  // art arda tiklarsa eski istegin GEC gelip yeniyi ezmesi riski var (bkz.
-  // eski, senkron loadEmbedded modelinde bu risk yoktu) - her cagriya bir
-  // "bilet" veriyoruz, sadece EN SON cagrinin sonucu uygulanir.
+  // Fetch async oldugu icin hizli art arda yil degistirmede eski istek gec
+  // gelip yeniyi ezebilir - her cagriya bir "bilet" verilir, sadece en son
+  // cagrinin sonucu uygulanir.
   let loadYearTicket = 0;
   async function loadYear(year){
     const ticket = ++loadYearTicket;

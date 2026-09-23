@@ -84,7 +84,6 @@
   .source-badge .dot{width:8px; height:8px; border-radius:50%; background:var(--ok); flex:none;}
   .source-badge .dot.secondary{background:var(--ink-3);}
   .source-badge .dot.mixed{background:var(--ink-3);}
-  .source-badge .dot.conflict{background:var(--warn);}
   .link-btn{font:inherit; font-size:12.5px; font-weight:600; color:var(--ink-2); background:none; border:none; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
   .link-btn:hover{color:var(--ink-1);}
 

@@ -94,7 +94,6 @@
   .source-badge .dot{width:8px; height:8px; border-radius:50%; background:var(--ok); flex:none;}
   .source-badge .dot.secondary{background:var(--ink-3);}
   .source-badge .dot.mixed{background:var(--ink-3);}
-  .source-badge .dot.conflict{background:var(--warn);}
   .link-btn{font:inherit; font-size:12.5px; font-weight:600; color:var(--ink-2); background:none; border:none; padding:0; cursor:pointer; text-decoration:underline; text-underline-offset:2px;}
   .link-btn:hover{color:var(--ink-1);}
 
@@ -454,12 +453,9 @@
   const fmt = n => n==null ? '—' : n.toLocaleString('tr-TR');
   const fmt1 = n => n==null ? '—' : n.toLocaleString('tr-TR',{maximumFractionDigits:1,minimumFractionDigits:1});
 
-  // Veri artik (turkiye-secim-haritasi'ndaki gibi) tek bir dosyaya gomulu
-  // DEGIL - ayri statik JSON dosyalari olarak fetch() ile okunuyor (bkz.
-  // turkiye-secim-data reposundaki scripts/export_static.py, bu dosyalari
-  // uretir). Yollar SAYFAYA GORE (relative, basinda / yok) - boylece hem
-  // yerelde hem GitHub Pages'in bir alt dizin (repo-adi) altinda servis
-  // etmesiyle de dogru calisir.
+  // Veri ayri statik JSON dosyalari olarak fetch() ile okunuyor. Yollar
+  // sayfaya gore (relative, basinda / yok) - boylece hem yerelde hem GitHub
+  // Pages'in bir alt dizin (repo-adi) altinda servis etmesiyle de calisir.
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -477,11 +473,10 @@
 
   let BUNDLE, GEO, GEO_ILCE, GEO_ILCE_HIST, MAHALLE_GEO, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS;
   try{
-    // mahalle_geo.json (poligonlar) ve GEO/GEO_ILCE gibi paylasimli/nispeten
-    // kucuk dosyalar eager yukleniyor. secimler (46 dosya) ARTIK burada HIC
-    // yuklenmiyor - BUNDLE.secimler bos baslar, her yil sadece kullanici
-    // SECTIGINDE fetchElection() ile lazy-load edilir (bkz. app.js: loadYear).
-    // mahalle_votes ise zaten yil-basina ayri dosya, o da lazy (degismedi).
+    // Paylasimli/nispeten kucuk dosyalar (geo, mahalle poligonlari, parti
+    // renkleri) burada eager yukleniyor. Secimler ve mahalle oy verisi ise
+    // lazy - her yil sadece secildiginde fetchElection()/loadMahalleVotesForYear()
+    // ile indirilir (bkz. app.js: loadYear).
     const [partiler, il, ilce, ilceHist, mahalleGeo, meclis, mahalleCoverage, districtSplits] = await Promise.all([
       fetchJSON("data/parties.json"),
       fetchJSON("geo/il_sinirlari.geojson"),
@@ -537,39 +532,22 @@
   const REF_YEAR_LABEL = {'2017referandum':'2017','2010referandum':'2010','2007referandum':'2007','1988referandum':'1988','1987referandum':'1987','1982referandum':'1982','1961referandum':'1961'};
   const YEREL_YEAR_ORDER = ['2024yerel','2019yerel','2014yerel','2009yerel','2004yerel','1999yerel','1994yerel','1989yerel','1984yerel','1977yerel','1973yerel','1968yerel','1963yerel','1955yerel','1950yerel'];
   const YEREL_YEAR_LABEL = {'2024yerel':'2024','2019yerel':'2019','2014yerel':'2014','2009yerel':'2009','2004yerel':'2004','1999yerel':'1999','1994yerel':'1994','1989yerel':'1989','1984yerel':'1984','1977yerel':'1977','1973yerel':'1973','1968yerel':'1968','1963yerel':'1963','1955yerel':'1955','1950yerel':'1950'};
-  // 1950-1961 genel secimlerinde vekil (sandalye) verisi onceden (Wikipedia
-  // kaynakli) yoktu; artik YSK'nin resmi, TUIK kaynakli 1950-1977 il arsivinden
-  // var (bkz. scripts/genel-1950-1977-pipeline/). Bos kalirsa (gelecekte baska
-  // bir yil icin ayni durum olursa) buraya eklenebilir.
+  // Vekil (sandalye) verisi kaynakta guvenilmez/eksik olan yillar - simdilik bos.
   const YEARS_NO_VEKIL = new Set([]);
-  // 1950-1987 genel secimlerinde ve 1961/1982/1987/1988/2007 referandumlarinda ilce-bazli
-  // kaynak yok - sadece il seviyesinde veri var. 2026-09-22: 1950-1977 yerel
-  // secimleri de ayni sekilde sadece il merkezi (bkz. SECIM_TAKVIMI.md,
-  // data/raw/wikipedia/yerel-1950-1977/PROVENANCE.md) - ilceler yok.
+  // Bu yillarda sadece il seviyesinde kaynak var, ilce kirilimi yok.
   const YEARS_IL_ONLY = new Set(['1950','1954','1957','1961','1965','1969','1973','1977','1983','1987',
     '1961referandum','1982referandum','1987referandum','1988referandum',
     '1950yerel','1955yerel','1963yerel','1968yerel','1973yerel','1977yerel']);
-  // 2026-09-22: 1950-1977 yerel secimleri, digerlerinden farkli bir kaynak
-  // notu metni gerektiriyor (YSK'nin bu donem icin il-bazli degil, sadece
-  // ULUSAL toplam PDF'i var - bkz. data/raw/ysk/mahalli-1963-1977/PROVENANCE.md).
+  // Bu yerel secimlerde kaynak il-bazli degil, sadece ulusal toplam - ayri
+  // bir kaynak notu metni gerektiriyor.
   const YEARS_YEREL_1950_1977 = new Set(['1950yerel','1955yerel','1963yerel','1968yerel','1973yerel','1977yerel']);
-  // 2026-09-22: YSK'nin resmi il-bazli (1950/1954/1957/1961 genel,
-  // 1961/1982/1987/1988 referandum) veya il+ilce-bazli (2007referandum,
-  // 2014cb) arsivlerine yukseltilen yillar — kaynakLine bunlar icin ozel.
-  // 1983/1987 de ikinci oturumda ayni arsiv ailesinden (Milletvekili/1983-
-  // 2007/<Il>.pdf) eklendi, 1950-1977 ile ayni davranisi (sadece il) alir.
+  // Il duzeyinde resmi arsive dayanan yillar (kaynak rozeti icin).
   const YEARS_YSK_OFFICIAL_IL = new Set(['1950','1954','1957','1961','1965','1969','1973','1977',
     '1983','1987',
     '1961referandum','1982referandum','1987referandum','1988referandum']);
-  // 2026-09-22 (ikinci oturum): bu 5 genel secim yilinda IL duzeyi YSK'nin
-  // resmi il-bazli arsivine yukseltildi ama ILCE duzeyi hala Github'daki
-  // mertnuhoglu/secim_verileri deposundan (bkz. data/raw/ysk/1983-2007/
-  // PROVENANCE.md) - yani tek bir "kaynak" etiketi yeterli degil, il ve ilce
-  // ayri belirtiliyor.
+  // Il duzeyi resmi, ilce duzeyi ikincil kaynakli genel secim yillari.
   const YEARS_IL_YSK_ILCE_GITHUB = new Set(['1991','1995','1999','2002','2007']);
-  // 2026-09-22 (ikinci oturum): bu 3 yerel secim yilinda IL MERKEZI YSK'nin
-  // resmi arsivine yukseltildi, ILCE duzeyi hala Wikipedia kaynakli (Github
-  // degil, bu yuzden ayri bir set - farkli kaynak metni gerekiyor).
+  // Il merkezi resmi, ilce duzeyi ikincil kaynakli yerel secim yillari.
   const YEARS_YEREL_IL_YSK_ILCE_WIKI = new Set(['1994yerel','1999yerel','2004yerel']);
   const CB_YEAR_ORDER = ['2023cb2tur','2023cb1tur','2018cb','2014cb'];
   const CB_YEAR_LABEL = {'2023cb2tur':'2023 (2.Tur)','2023cb1tur':'2023 (1.Tur)','2018cb':'2018','2014cb':'2014'};
@@ -831,15 +809,9 @@
 
 
   // ---------------- kaynak siniflandirmasi ----------------
-  // Onceki oturumlarda kaynakLine olarak duz metin uretilen ayni kosullar,
-  // artik hem rozet (kisa) hem drawer (uzun) icin yeniden kullaniliyor.
-  const YEARS_KAYNAK_UYUSMAZLIGI = new Set(['1950']);
-
-  // Ust bardaki tek-satir rozette "(İl)"/"Veri" gibi ekler artik gereksiz -
-  // seviye zaten ayni satirda "· Ayrıntı: X" olarak ayrica gosteriliyor
-  // (bkz. renderElectionBar). sourceInfo()'nun kendi badge metnini
-  // DEGISTIRMEDEN (drawer'da hala tam haliyle kullaniliyor), sadece rozette
-  // kisaltilmis halini gostermek icin kucuk bir esleme.
+  // Ust bardaki ve "Kaynaklar" panelindeki rozet icin genel kategori -
+  // hangi ozel arsiv/sayfanin kullanildigi burada degil, veri deposunun
+  // kendi belgelerinde tutuluyor.
   const SHORT_BADGE = {
     'YSK Resmî Veri': 'YSK Resmî',
     'YSK Resmî Veri (İl)': 'YSK Resmî',
@@ -849,23 +821,15 @@
   };
 
   function sourceInfo(){
-    if(currentYear==='2014cb')
-      return {cat:'full', badge:'YSK Resmî Veri', detail:'YSK Açık Veri Portalı (acikveri.ysk.gov.tr, resmi API) — il+ilçe düzeyi.'};
-    if(currentYear==='2007referandum')
-      return {cat:'full', badge:'YSK Resmî Veri', detail:'YSK (resmi il+ilçe bazlı birleştirme tutanakları).'};
+    if(currentYear==='2014cb' || currentYear==='2007referandum')
+      return {cat:'full', badge:'YSK Resmî Veri'};
     if(YEARS_YSK_OFFICIAL_IL.has(currentYear))
-      return {cat:'full', badge:'YSK Resmî Veri (İl)', detail:'YSK resmi il-bazlı arşivi — bu dönem için sadece il seviyesinde kayıt tutulmuş, ilçe kırılımı resmi kaynakta yok.'};
-    if(YEARS_IL_YSK_ILCE_GITHUB.has(currentYear))
-      return {cat:'mixed', badge:'YSK (İl) + İkincil (İlçe)', detail:'İl düzeyi — YSK resmi arşivi. İlçe düzeyi — mertnuhoglu/secim_verileri (GitHub, memurlar.net kaynaklı, MIT lisanslı yerel arşiv).'};
-    if(YEARS_YEREL_IL_YSK_ILCE_WIKI.has(currentYear))
-      return {cat:'mixed', badge:'YSK (İl) + İkincil (İlçe)', detail:'İl merkezi — YSK resmi arşivi. Diğer ilçeler — çoğunlukla YSK (aynı arşivin ilçe/belde kırılımından), bir kısmı hâlâ Türkçe Wikipedia.'};
-    if(YEARS_YEREL_1950_1977.has(currentYear))
-      return {cat:'secondary', badge:'İkincil Kaynak', detail:'Türkçe Wikipedia (il alt-sayfaları) — YSK\'nin bu dönem için sadece ulusal toplam PDF\'i var, il-bazlı kırılım yok. Wikipedia verisi YSK ulusal toplamıyla çapraz kontrol edildi.'};
-    if(YEARS_IL_ONLY.has(currentYear))
-      return {cat:'secondary', badge:'İkincil Kaynak', detail:'Türkçe Wikipedia, YSK kesin sonuçlarına dayalı — sadece il seviyesinde.'};
-    if(currentYear==='2009yerel'||currentYear==='2004yerel')
-      return {cat:'mixed', badge:'YSK + İkincil Kaynak', detail:'İl düzeyi — YSK resmi arşivi. İlçe düzeyi — çoğunlukla YSK (aynı arşivin ilçe/belde kırılımından), bir kısmı Türkçe Wikipedia.'};
-    return {cat:'full', badge:'YSK Resmî Veri', detail:'YSK Açık Veri Portalı (acikveri.ysk.gov.tr) — sandık düzeyinde çekilip il/ilçe toplamlarına agrege edilmiş resmi veri.'};
+      return {cat:'full', badge:'YSK Resmî Veri (İl)'};
+    if(YEARS_IL_YSK_ILCE_GITHUB.has(currentYear) || YEARS_YEREL_IL_YSK_ILCE_WIKI.has(currentYear) || currentYear==='2009yerel' || currentYear==='2004yerel')
+      return {cat:'mixed', badge:'YSK (İl) + İkincil (İlçe)'};
+    if(YEARS_YEREL_1950_1977.has(currentYear) || YEARS_IL_ONLY.has(currentYear))
+      return {cat:'secondary', badge:'İkincil Kaynak'};
+    return {cat:'full', badge:'YSK Resmî Veri'};
   }
 
   function computeLevels(){
@@ -896,10 +860,6 @@
     const lv = computeLevels();
     const detailLevel = lv.mahalleOn ? 'Mahalleye kadar' : (lv.ilceOn ? 'İlçe' : 'İl düzeyi');
     $('#sourceBadgeText').textContent = (SHORT_BADGE[src.badge] || src.badge) + ' · Ayrıntı: ' + detailLevel;
-
-    if(YEARS_KAYNAK_UYUSMAZLIGI.has(currentYear)){
-      $('#sourceBadgeDot').className = 'dot conflict';
-    }
   }
 
   function renderNationalSummary(){
@@ -937,19 +897,13 @@
     html += '<div class="drawer-section-title">Bu seçim</div>';
     html += '<p><b>'+DATA.ad+' '+($('#eyebrowText').textContent)+'</b></p>';
     html += '<div class="dr-row"><span>Kaynak durumu</span><span class="dr-badge"><span class="dot" style="background:'+(src.cat==='secondary'?'var(--ink-3)':src.cat==='mixed'?'var(--ink-3)':'var(--ok)')+'"></span>'+src.badge+'</span></div>';
-    html += '<p style="margin-top:10px;">'+src.detail+'</p>';
     html += '<div class="dr-row"><span>İl kayıtları</span><span>'+DATA.iller.length+'</span></div>';
     html += '<div class="dr-row"><span>İlçe kayıtları (oy verisiyle)</span><span>'+lv.ilceWithData+' / '+lv.ilceTotal+'</span></div>';
     html += '<div class="dr-row"><span>Mahalle kırılımı olan ilçe</span><span>'+lv.mahalleDistricts+'</span></div>';
-    if(YEARS_KAYNAK_UYUSMAZLIGI.has(currentYear)){
-      html += '<div class="drawer-section-title">Bilinen kaynak uyuşmazlığı</div>';
-      html += '<p>1950 genel seçimi için YSK\'nin kendi il-bazlı arşivinden derlediğimiz ulusal toplam, YSK\'nin AYRI bir "ulusal özet" sayfasından ve TBMM\'nin kendi seçim veritabanından küçük farklarla (binde birkaç mertebesinde) ayrılıyor. İlginç olan: il-bazlı toplamımız YSK\'nin kendi ulusal özetinden çok TBMM\'ye yakın çıkıyor — yani YSK\'nin kendi sitesi bile kendi içinde tam tutarlı değil. Bu proje, çözmeye çalışmak yerine üç kaynağı da olduğu gibi kaydediyor.</p>';
-    }
-    html += '<div class="drawer-section-title">Genel metodoloji</div>';
-    html += '<p>Bu proje 1950–2024 arası Türkiye\'deki genel, yerel, referandum ve cumhurbaşkanlığı seçimlerinin sonuçlarını mümkün olduğunca YSK (Yüksek Seçim Kurulu) ve TÜİK\'in resmi arşivlerinden derler. Resmi bir il/ilçe kırılımı bulunamayan dönemlerde, YSK\'nin ulusal toplamıyla çapraz kontrol edilmiş ikincil kaynaklar (Türkçe Wikipedia, MIT lisanslı açık kaynaklı arşivler) kullanılır — hangisinin kullanıldığı her seçim için yukarıda ayrı ayrı belirtilir.</p>';
-    html += '<p>İl/ilçe sınırları: ttezer/turkiye-harita-verisi (HDX kaynaklı, basitleştirilmiş). Tarihsel il/ilçe değişiklikleri (sonradan il olan ilçeler, büyükşehir ilçe bölünmeleri) ayrı bir tarihsel geometri katmanıyla o dönemin gerçek sınırlarına göre gösterilir.</p>';
-    html += '<p>Yurtdışı seçmen oyları (temsilcilik/konsolosluk sandıkları) hiçbir ile bağlı olmadığı için haritaya dahil edilmez, mevcut olduğu seçimlerde ayrı bir panelde gösterilir.</p>';
-    html += '<p>Bu bir kişisel veri derleme çalışmasıdır, resmî bir YSK yayını değildir. Kaynak kodu ve tam sağlama (checksum) kayıtları GitHub\'da:<br><a class="link-btn" href="https://github.com/hamiKumbasae/turkiye-secim-haritasi" target="_blank" rel="noopener" style="text-decoration:underline;">github.com/hamiKumbasae/turkiye-secim-haritasi</a></p>';
+    html += '<div class="drawer-section-title">Kaynak ve metodoloji</div>';
+    html += '<p>Seçim sonuçları ağırlıklı olarak YSK ve diğer resmî kamu kaynaklarından derlenmiştir. Eksik tarihsel dönemlerde ikincil kaynaklardan yararlanılmıştır. Veriler yayın öncesinde normalize edilip doğrulama kontrollerinden geçirilir.</p>';
+    html += '<p>Yurtdışı seçmen oyları hiçbir ile bağlı olmadığı için haritaya dahil edilmez, mevcut olduğu seçimlerde ayrı bir panelde gösterilir.</p>';
+    html += '<p>Bu bir kişisel veri derleme çalışmasıdır, resmî bir YSK yayını değildir. Kaynak kodu:<br><a class="link-btn" href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener" style="text-decoration:underline;">github.com/hamiKumbasae/turkiye-secim-atlasi</a></p>';
     $('#drawerBody').innerHTML = html;
   }
 
@@ -1020,7 +974,7 @@
   // Karabuk/Kilis/Yalova (1995), Osmaniye (1996), Sakarya/Adiyaman/Nevsehir (1954),
   // Usak (1954) ve Duzce (1999) o yillarda henuz bagimsiz il degildi - o donemin secim
   // haritasinda bos/gri gorunmemeleri icin kendi donemlerinde ait olduklari ile
-  // birlestirilmis ozel bir GeoJSON kullaniliyor (bkz. build_historical_geo.py).
+  // birlestirilmis ozel bir GeoJSON (geo/eras/) kullaniliyor.
   const GEO_ERAS = [ // [esik_yili, dosya_eki] - yil < esik_yili ise bu era kullanilir
     [1954, 'era1950'], [1957, 'era1954'], [1991, 'era1957_1987'],
     [1995, 'era1991'], [1999, 'era1995'], [2002, 'era1999'],
@@ -1072,8 +1026,8 @@
   }
   // council_seats/mixed (1950/1955 yerel): oy oranlari ile sandalye paylari
   // AYNI renk skalasinda karsilastirilamaz (biri gercek oy yuzdesi, digeri
-  // meclis sandalye payi) - v1 icin bu sadece "Parti" modunu bu yillarda
-  // gizler (bkz. son inceleme), yeni bir "Meclis Payı" modu EKLEMEZ.
+  // meclis sandalye payi) - bu yillarda sadece "Parti" modu gizlenir, ayri
+  // bir "Meclis Payı" modu eklenmez.
   function partiModeAvailable(){
     return DATA.resultBasis !== 'council_seats' && DATA.resultBasis !== 'mixed';
   }
@@ -1164,15 +1118,10 @@
     return rows.length ? rows : null;
   }
 
-  // Bir kac secili (simdilik SADECE tek-ebeveynli, yuksek-guven arastirmayla
-  // dogrulanmis) ilce icin gercek tarihsel poligon birlesimi var (bkz.
-  // geo/historical/district_splits.json + turkiye_ilce_sinirlari_hist_splits.geojson,
-  // orn. HIST-Istanbul-Buyukcekmece = Buyukcekmece+Beylikduzu). Bu secimde
-  // o birlesik (sentetik) id GERCEKTEN kullanildiysa (veri satirinin geomId'si
-  // ona esitse), birlesimin PARCASI olan modern id'leri (orn. Beylikduzu'nun
-  // kendi modern poligonu) AYRICA "veri yok" katmaninda gostermiyoruz -
-  // yoksa ayni alan iki kez (bir kere dogru renkli birlesim, bir kere de
-  // notr/gri kendi parcasi olarak) cizilmis olur.
+  // Bazı ilçeler için gerçek tarihsel poligon birleşimi var (bkz.
+  // geo/district_splits.json). Bu seçimde o sentetik id kullanıldıysa,
+  // birleşimin parçası olan modern ilçe id'leri ayrıca "veri yok" katmanında
+  // gösterilmez - yoksa aynı alan iki kez (birleşim + kendi parçası) çizilir.
   function hiddenModernIdsForProvince(plaka, dataGeomIds){
     const hidden = new Set();
     const splits = DISTRICT_SPLITS[String(plaka)] || [];
@@ -1187,22 +1136,17 @@
   function renderProvinceMap(plaka){
     view = {level:'province', plaka};
     const allDataFeats = districtFeaturesForProvince(plaka);
-    // Sadece GERCEKTEN sonucu olan ilceler tiklanabilir/etkilesimli olsun (bkz.
-    // son inceleme: veri olmayan yerde yaniltici bir "tiklama alani" gorunmemeli).
+    // Sadece GERCEKTEN sonucu olan ilceler tiklanabilir/etkilesimli olsun -
+    // veri olmayan yerde yaniltici bir "tiklama alani" gorunmemeli.
     const dataFeats = allDataFeats.filter(f => districtHasRealData(districtByGeomId[f.properties.id]));
     const dataGeomIds = new Set(dataFeats.map(f=>f.properties.id));
     const hiddenByMerge = hiddenModernIdsForProvince(plaka, dataGeomIds);
-    // Bu ilin GUNCEL (modern) tum ilce sinirlari - SADECE bu il/yil icin
-    // GERCEKTEN kismi ilce verisi varsa (dataFeats.length>0, yani bazi
-    // ilceler biliniyor bazilari bilinmiyor) devreye girer: bilinmeyenleri
-    // notr/TIKLANAMAZ bir alt katman olarak gosterir (orn. 2008 oncesi
-    // Istanbul'da Ataşehir/Sancaktepe vb.) - BILEREK gercek tarihsel
-    // sinirlari "uydurmuyor". Eger bu il/yil icin HIC ilce verisi yoksa
-    // (dataFeats bos - orn. 1950-1977/1983-1987 genel, sadece il-duzeyi
-    // kaynak), bu katman HIC HESAPLANMAZ/GOSTERILMEZ - asagidaki "tek
-    // parca il" fallback'i kullanilir (bkz. son inceleme: bilmedigimiz
-    // bir seyi 39 parcaya bolup "veri yok" diye gostermek de yaniltici -
-    // sadece GERCEKTEN KISMEN bildigimiz durumlarda parcali gosterim yapilir).
+    // Bu il/yil icin KISMI ilce verisi varsa (bazi ilceler biliniyor, bazilari
+    // bilinmiyor), bilinmeyenleri notr/tiklanamaz bir alt katman olarak
+    // gosteririz - gercek tarihsel sinirlari uydurmadan. HIC ilce verisi
+    // yoksa (dataFeats bos) bu katman hic hesaplanmaz, asagidaki "tek parca
+    // il" fallback'i kullanilir - bilmedigimiz bir seyi parcalara bolup
+    // "veri yok" diye gostermek de yaniltici olur.
     const modernFeats = dataFeats.length ? GEO_ILCE.features.filter(f=>f.properties.plaka===plaka) : [];
     const noDataFeats = modernFeats.filter(f=>!dataGeomIds.has(f.properties.id) && !hiddenByMerge.has(f.properties.id));
     const fallbackFeats = GEO.features.filter(f=>f.properties.plaka===plaka);
@@ -1253,9 +1197,8 @@
       el.addEventListener('click', async ()=>{
         const d = districtByGeomId[geomId];
         // Mahalle haritasina inerken bile once ilcenin KENDI verisini panelde
-        // goster (bkz. son inceleme: tiklama, eski/genel veriyi degil TIKLANAN
-        // yerin verisini gostermeli) - kullanici sonra istedigi mahalleye
-        // tiklayip daha da detaya inebilir.
+        // goster - tiklanan yerin verisi eskisini ezmeli, kullanici sonra
+        // istedigi mahalleye ayrica tiklayabilir.
         if(d) selectDistrict(d, plaka);
         if(mahalleGeoExistsForDistrict(geomId)){
           const rows = await mahalleDataForDistrict(geomId);
@@ -1281,11 +1224,9 @@
   }
 
   // Tiklanan/aranan ile HANGI gorunume gidilecegini tek yerden karar verir:
-  // ilce verisi varsa normal ilce-haritasina in (drillIntoProvince); yoksa
-  // (o il/yil icin hic ilce-duzeyi veri bilmiyorsak) HARITA ulke goruminde
-  // KALIR - olmayan bir "ilce gorunumu"ne (39/81 parcali ya da tek-parca-il
-  // gosterip "İlçe Sonuçları" baslikli sahte bir alt seviye) hic gecilmez,
-  // sadece sag panelde ilin kendi sonucu gosterilir (bkz. son inceleme).
+  // ilce verisi varsa normal ilce-haritasina in; yoksa harita ulke goruminde
+  // kalir, sahte bir "ilce gorunumu"ne gecilmez, sag panelde ilin kendi
+  // sonucu gosterilir.
   function goToProvince(plaka){
     if(provinceHasDistrictData(plaka)){
       drillIntoProvince(plaka);
@@ -1531,7 +1472,7 @@
 
     // Bu il icin HIC ilce-duzeyi veri yoksa (orn. 1965 genel), "İlçeler"
     // basligi/arama/liste bolumunu hic gostermiyoruz - olmayan bir alt
-    // seviyeyi varmis gibi sunmak yaniltici olurdu (bkz. son inceleme).
+    // seviyeyi varmis gibi sunmak yaniltici olurdu.
     const hasDistricts = provinceHasDistrictData(plaka);
     $('#dDistrictsLabel').textContent = 'İlçeler';
     $('#dDistrictsLabel').style.display = hasDistricts ? '' : 'none';
@@ -1607,8 +1548,7 @@
 
   // Bir ilce kaydinda GERCEK sonuc var mi (bos/hic olusturulmamis 'oy' sozlugu
   // degil) - hem harita (map.js) hem bu panel, tiklanabilir/etkilesimli
-  // gosterecegi ilceleri bu kontrolden gecirir (bkz. son inceleme: veri
-  // olmayan yerde tiklama alani gorunmemeli).
+  // gosterecegi ilceleri bu kontrolden gecirir.
   function districtHasRealData(d){
     return !!d && !!d.oy && Object.keys(d.oy).length > 0;
   }
@@ -1789,8 +1729,8 @@
     const wrap = $('#dParties'); wrap.innerHTML='';
     for(const [name, n] of rows){
       // Meclis UYE SAYISI - oy DEGIL. {oy:n} sekli isSeatBased()'i yanlislikla
-      // atlatip "n oy" yazdiriyordu (bkz. son inceleme) - dogru sekil, partyRowEl'in
-      // (result-utils.js uzerinden) sandalye dalina girmesini saglar: "n meclis sandalyesi".
+      // atlatip "n oy" yazdirir - dogru sekil, partyRowEl'in (result-utils.js
+      // uzerinden) sandalye dalina girmesini saglar: "n meclis sandalyesi".
       wrap.appendChild(partyRowEl({name, oy:{oy:null, sandalye:n, oranSandalye: m.toplam ? n/m.toplam*100 : null}, vekil:0}));
     }
   }
@@ -1943,10 +1883,9 @@
     loadYear(TUR_YEARS[tur][0]);
   }
 
-  // Veri artik fetch ile (async) geldigi icin, kullanici hizlica iki yila
-  // art arda tiklarsa eski istegin GEC gelip yeniyi ezmesi riski var (bkz.
-  // eski, senkron loadEmbedded modelinde bu risk yoktu) - her cagriya bir
-  // "bilet" veriyoruz, sadece EN SON cagrinin sonucu uygulanir.
+  // Fetch async oldugu icin hizli art arda yil degistirmede eski istek gec
+  // gelip yeniyi ezebilir - her cagriya bir "bilet" verilir, sadece en son
+  // cagrinin sonucu uygulanir.
   let loadYearTicket = 0;
   async function loadYear(year){
     const ticket = ++loadYearTicket;

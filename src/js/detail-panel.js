@@ -94,7 +94,7 @@
 
     // Bu il icin HIC ilce-duzeyi veri yoksa (orn. 1965 genel), "İlçeler"
     // basligi/arama/liste bolumunu hic gostermiyoruz - olmayan bir alt
-    // seviyeyi varmis gibi sunmak yaniltici olurdu (bkz. son inceleme).
+    // seviyeyi varmis gibi sunmak yaniltici olurdu.
     const hasDistricts = provinceHasDistrictData(plaka);
     $('#dDistrictsLabel').textContent = 'İlçeler';
     $('#dDistrictsLabel').style.display = hasDistricts ? '' : 'none';
@@ -170,8 +170,7 @@
 
   // Bir ilce kaydinda GERCEK sonuc var mi (bos/hic olusturulmamis 'oy' sozlugu
   // degil) - hem harita (map.js) hem bu panel, tiklanabilir/etkilesimli
-  // gosterecegi ilceleri bu kontrolden gecirir (bkz. son inceleme: veri
-  // olmayan yerde tiklama alani gorunmemeli).
+  // gosterecegi ilceleri bu kontrolden gecirir.
   function districtHasRealData(d){
     return !!d && !!d.oy && Object.keys(d.oy).length > 0;
   }
@@ -352,8 +351,8 @@
     const wrap = $('#dParties'); wrap.innerHTML='';
     for(const [name, n] of rows){
       // Meclis UYE SAYISI - oy DEGIL. {oy:n} sekli isSeatBased()'i yanlislikla
-      // atlatip "n oy" yazdiriyordu (bkz. son inceleme) - dogru sekil, partyRowEl'in
-      // (result-utils.js uzerinden) sandalye dalina girmesini saglar: "n meclis sandalyesi".
+      // atlatip "n oy" yazdirir - dogru sekil, partyRowEl'in (result-utils.js
+      // uzerinden) sandalye dalina girmesini saglar: "n meclis sandalyesi".
       wrap.appendChild(partyRowEl({name, oy:{oy:null, sandalye:n, oranSandalye: m.toplam ? n/m.toplam*100 : null}, vekil:0}));
     }
   }

@@ -48,7 +48,7 @@
   // Karabuk/Kilis/Yalova (1995), Osmaniye (1996), Sakarya/Adiyaman/Nevsehir (1954),
   // Usak (1954) ve Duzce (1999) o yillarda henuz bagimsiz il degildi - o donemin secim
   // haritasinda bos/gri gorunmemeleri icin kendi donemlerinde ait olduklari ile
-  // birlestirilmis ozel bir GeoJSON kullaniliyor (bkz. build_historical_geo.py).
+  // birlestirilmis ozel bir GeoJSON (geo/eras/) kullaniliyor.
   const GEO_ERAS = [ // [esik_yili, dosya_eki] - yil < esik_yili ise bu era kullanilir
     [1954, 'era1950'], [1957, 'era1954'], [1991, 'era1957_1987'],
     [1995, 'era1991'], [1999, 'era1995'], [2002, 'era1999'],
@@ -100,8 +100,8 @@
   }
   // council_seats/mixed (1950/1955 yerel): oy oranlari ile sandalye paylari
   // AYNI renk skalasinda karsilastirilamaz (biri gercek oy yuzdesi, digeri
-  // meclis sandalye payi) - v1 icin bu sadece "Parti" modunu bu yillarda
-  // gizler (bkz. son inceleme), yeni bir "Meclis Payı" modu EKLEMEZ.
+  // meclis sandalye payi) - bu yillarda sadece "Parti" modu gizlenir, ayri
+  // bir "Meclis Payı" modu eklenmez.
   function partiModeAvailable(){
     return DATA.resultBasis !== 'council_seats' && DATA.resultBasis !== 'mixed';
   }
@@ -192,15 +192,10 @@
     return rows.length ? rows : null;
   }
 
-  // Bir kac secili (simdilik SADECE tek-ebeveynli, yuksek-guven arastirmayla
-  // dogrulanmis) ilce icin gercek tarihsel poligon birlesimi var (bkz.
-  // geo/historical/district_splits.json + turkiye_ilce_sinirlari_hist_splits.geojson,
-  // orn. HIST-Istanbul-Buyukcekmece = Buyukcekmece+Beylikduzu). Bu secimde
-  // o birlesik (sentetik) id GERCEKTEN kullanildiysa (veri satirinin geomId'si
-  // ona esitse), birlesimin PARCASI olan modern id'leri (orn. Beylikduzu'nun
-  // kendi modern poligonu) AYRICA "veri yok" katmaninda gostermiyoruz -
-  // yoksa ayni alan iki kez (bir kere dogru renkli birlesim, bir kere de
-  // notr/gri kendi parcasi olarak) cizilmis olur.
+  // Bazı ilçeler için gerçek tarihsel poligon birleşimi var (bkz.
+  // geo/district_splits.json). Bu seçimde o sentetik id kullanıldıysa,
+  // birleşimin parçası olan modern ilçe id'leri ayrıca "veri yok" katmanında
+  // gösterilmez - yoksa aynı alan iki kez (birleşim + kendi parçası) çizilir.
   function hiddenModernIdsForProvince(plaka, dataGeomIds){
     const hidden = new Set();
     const splits = DISTRICT_SPLITS[String(plaka)] || [];
@@ -215,22 +210,17 @@
   function renderProvinceMap(plaka){
     view = {level:'province', plaka};
     const allDataFeats = districtFeaturesForProvince(plaka);
-    // Sadece GERCEKTEN sonucu olan ilceler tiklanabilir/etkilesimli olsun (bkz.
-    // son inceleme: veri olmayan yerde yaniltici bir "tiklama alani" gorunmemeli).
+    // Sadece GERCEKTEN sonucu olan ilceler tiklanabilir/etkilesimli olsun -
+    // veri olmayan yerde yaniltici bir "tiklama alani" gorunmemeli.
     const dataFeats = allDataFeats.filter(f => districtHasRealData(districtByGeomId[f.properties.id]));
     const dataGeomIds = new Set(dataFeats.map(f=>f.properties.id));
     const hiddenByMerge = hiddenModernIdsForProvince(plaka, dataGeomIds);
-    // Bu ilin GUNCEL (modern) tum ilce sinirlari - SADECE bu il/yil icin
-    // GERCEKTEN kismi ilce verisi varsa (dataFeats.length>0, yani bazi
-    // ilceler biliniyor bazilari bilinmiyor) devreye girer: bilinmeyenleri
-    // notr/TIKLANAMAZ bir alt katman olarak gosterir (orn. 2008 oncesi
-    // Istanbul'da Ataşehir/Sancaktepe vb.) - BILEREK gercek tarihsel
-    // sinirlari "uydurmuyor". Eger bu il/yil icin HIC ilce verisi yoksa
-    // (dataFeats bos - orn. 1950-1977/1983-1987 genel, sadece il-duzeyi
-    // kaynak), bu katman HIC HESAPLANMAZ/GOSTERILMEZ - asagidaki "tek
-    // parca il" fallback'i kullanilir (bkz. son inceleme: bilmedigimiz
-    // bir seyi 39 parcaya bolup "veri yok" diye gostermek de yaniltici -
-    // sadece GERCEKTEN KISMEN bildigimiz durumlarda parcali gosterim yapilir).
+    // Bu il/yil icin KISMI ilce verisi varsa (bazi ilceler biliniyor, bazilari
+    // bilinmiyor), bilinmeyenleri notr/tiklanamaz bir alt katman olarak
+    // gosteririz - gercek tarihsel sinirlari uydurmadan. HIC ilce verisi
+    // yoksa (dataFeats bos) bu katman hic hesaplanmaz, asagidaki "tek parca
+    // il" fallback'i kullanilir - bilmedigimiz bir seyi parcalara bolup
+    // "veri yok" diye gostermek de yaniltici olur.
     const modernFeats = dataFeats.length ? GEO_ILCE.features.filter(f=>f.properties.plaka===plaka) : [];
     const noDataFeats = modernFeats.filter(f=>!dataGeomIds.has(f.properties.id) && !hiddenByMerge.has(f.properties.id));
     const fallbackFeats = GEO.features.filter(f=>f.properties.plaka===plaka);
@@ -281,9 +271,8 @@
       el.addEventListener('click', async ()=>{
         const d = districtByGeomId[geomId];
         // Mahalle haritasina inerken bile once ilcenin KENDI verisini panelde
-        // goster (bkz. son inceleme: tiklama, eski/genel veriyi degil TIKLANAN
-        // yerin verisini gostermeli) - kullanici sonra istedigi mahalleye
-        // tiklayip daha da detaya inebilir.
+        // goster - tiklanan yerin verisi eskisini ezmeli, kullanici sonra
+        // istedigi mahalleye ayrica tiklayabilir.
         if(d) selectDistrict(d, plaka);
         if(mahalleGeoExistsForDistrict(geomId)){
           const rows = await mahalleDataForDistrict(geomId);
@@ -309,11 +298,9 @@
   }
 
   // Tiklanan/aranan ile HANGI gorunume gidilecegini tek yerden karar verir:
-  // ilce verisi varsa normal ilce-haritasina in (drillIntoProvince); yoksa
-  // (o il/yil icin hic ilce-duzeyi veri bilmiyorsak) HARITA ulke goruminde
-  // KALIR - olmayan bir "ilce gorunumu"ne (39/81 parcali ya da tek-parca-il
-  // gosterip "İlçe Sonuçları" baslikli sahte bir alt seviye) hic gecilmez,
-  // sadece sag panelde ilin kendi sonucu gosterilir (bkz. son inceleme).
+  // ilce verisi varsa normal ilce-haritasina in; yoksa harita ulke goruminde
+  // kalir, sahte bir "ilce gorunumu"ne gecilmez, sag panelde ilin kendi
+  // sonucu gosterilir.
   function goToProvince(plaka){
     if(provinceHasDistrictData(plaka)){
       drillIntoProvince(plaka);

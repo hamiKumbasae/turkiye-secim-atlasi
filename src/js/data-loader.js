@@ -3,12 +3,9 @@
   const fmt = n => n==null ? '—' : n.toLocaleString('tr-TR');
   const fmt1 = n => n==null ? '—' : n.toLocaleString('tr-TR',{maximumFractionDigits:1,minimumFractionDigits:1});
 
-  // Veri artik (turkiye-secim-haritasi'ndaki gibi) tek bir dosyaya gomulu
-  // DEGIL - ayri statik JSON dosyalari olarak fetch() ile okunuyor (bkz.
-  // turkiye-secim-data reposundaki scripts/export_static.py, bu dosyalari
-  // uretir). Yollar SAYFAYA GORE (relative, basinda / yok) - boylece hem
-  // yerelde hem GitHub Pages'in bir alt dizin (repo-adi) altinda servis
-  // etmesiyle de dogru calisir.
+  // Veri ayri statik JSON dosyalari olarak fetch() ile okunuyor. Yollar
+  // sayfaya gore (relative, basinda / yok) - boylece hem yerelde hem GitHub
+  // Pages'in bir alt dizin (repo-adi) altinda servis etmesiyle de calisir.
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -26,11 +23,10 @@
 
   let BUNDLE, GEO, GEO_ILCE, GEO_ILCE_HIST, MAHALLE_GEO, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS;
   try{
-    // mahalle_geo.json (poligonlar) ve GEO/GEO_ILCE gibi paylasimli/nispeten
-    // kucuk dosyalar eager yukleniyor. secimler (46 dosya) ARTIK burada HIC
-    // yuklenmiyor - BUNDLE.secimler bos baslar, her yil sadece kullanici
-    // SECTIGINDE fetchElection() ile lazy-load edilir (bkz. app.js: loadYear).
-    // mahalle_votes ise zaten yil-basina ayri dosya, o da lazy (degismedi).
+    // Paylasimli/nispeten kucuk dosyalar (geo, mahalle poligonlari, parti
+    // renkleri) burada eager yukleniyor. Secimler ve mahalle oy verisi ise
+    // lazy - her yil sadece secildiginde fetchElection()/loadMahalleVotesForYear()
+    // ile indirilir (bkz. app.js: loadYear).
     const [partiler, il, ilce, ilceHist, mahalleGeo, meclis, mahalleCoverage, districtSplits] = await Promise.all([
       fetchJSON("data/parties.json"),
       fetchJSON("geo/il_sinirlari.geojson"),
