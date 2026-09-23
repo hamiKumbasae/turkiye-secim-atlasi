@@ -1,7 +1,11 @@
   const $ = (s,el=document) => el.querySelector(s);
   const $$ = (s,el=document) => [...el.querySelectorAll(s)];
   const fmt = n => n==null ? '—' : n.toLocaleString('tr-TR');
-  const fmt1 = n => n==null ? '—' : n.toLocaleString('tr-TR',{maximumFractionDigits:1,minimumFractionDigits:1});
+  // Veri kaynagi (YSK/TUIK/vb.) su an her zaman temiz (< > & " icermiyor,
+  // dogrulandi), ama isim/parti alanlarini innerHTML'e gomerken yine de
+  // kacis uygulanir - veri kaynagi ileride degisirse bu tek satir korur.
+  const ESCAPE_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+  const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESCAPE_MAP[c]);
 
   // Veri ayri statik JSON dosyalari olarak fetch() ile okunuyor. Yollar
   // sayfaya gore (relative, basinda / yok) - boylece hem yerelde hem GitHub

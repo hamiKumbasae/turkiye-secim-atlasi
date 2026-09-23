@@ -8,8 +8,12 @@
     } else if(view.level==='mahalle'){
       const match = currentMahalleRows.find(r=>r.ad.toLocaleLowerCase('tr').startsWith(q));
       if(match && pathByMahalleId[match.id]){
-        $$('.il-path').forEach(p=>p.classList.toggle('selected', p===pathByMahalleId[match.id]));
+        $$('.geo-path').forEach(p=>p.classList.toggle('selected', p===pathByMahalleId[match.id]));
       }
+    } else if(view.level==='meclis-ilce'){
+      const list = districtsByPlaka[view.plaka]||[];
+      const match = list.find(d=>d.ad.toLocaleLowerCase('tr').startsWith(q));
+      if(match && match.geomId) renderMeclisIlceMap(view.plaka, match.geomId);
     } else {
       const list = districtsByPlaka[view.plaka]||[];
       const match = list.find(d=>d.ad.toLocaleLowerCase('tr').startsWith(q));

@@ -65,7 +65,7 @@
     // renderYurtdisiCard). O yuzden bu secimde yurtdisi verisi VARSA
     // etiketleri "Yurt İçi ..." yaparak yaniltici bir "ulusal toplam"
     // izlenimi vermiyoruz.
-    const hasYurtdisi = !!(DATA.yurtdisi && DATA.yurtdisi.oy && Object.keys(DATA.yurtdisi.oy).length);
+    const hasYurtdisi = hasYurtdisiData();
     const items = [
       [hasYurtdisi ? 'Yurt İçi Katılım' : 'Katılım', katilim!=null ? '%'+katilim.toFixed(2) : '—'],
       [hasYurtdisi ? 'Yurt İçi Seçmen' : 'Seçmen', secmen ? fmt(secmen) : '—'],
@@ -85,7 +85,7 @@
     const lv = computeLevels();
     let html = '';
     html += '<div class="drawer-section-title">Bu seçim</div>';
-    html += '<p><b>'+DATA.ad+' '+($('#eyebrowText').textContent)+'</b></p>';
+    html += '<p><b>'+escapeHtml(DATA.ad+' '+$('#eyebrowText').textContent)+'</b></p>';
     html += '<div class="dr-row"><span>Kaynak durumu</span><span class="dr-badge"><span class="dot" style="background:'+(src.cat==='secondary'?'var(--ink-3)':src.cat==='mixed'?'var(--ink-3)':'var(--ok)')+'"></span>'+src.badge+'</span></div>';
     html += '<div class="dr-row"><span>İl kayıtları</span><span>'+DATA.iller.length+'</span></div>';
     html += '<div class="dr-row"><span>İlçe kayıtları (oy verisiyle)</span><span>'+lv.ilceWithData+' / '+lv.ilceTotal+'</span></div>';

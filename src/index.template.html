@@ -25,11 +25,11 @@
     </nav>
   </header>
 
-  <div class="tur-tabs" id="turToggle">
-    <button id="btnTurGenel">Genel Seçimler</button>
+  <div class="tur-tabs">
+    <button id="btnTurGenel" class="active">Genel Seçimler</button>
     <button id="btnTurYerel">Yerel Seçimler</button>
     <button id="btnTurReferandum">Referandumlar</button>
-    <button id="btnTurCB" class="active">Cumhurbaşkanlığı</button>
+    <button id="btnTurCB">Cumhurbaşkanlığı</button>
   </div>
 
   <div class="year-timeline" id="yearPicker"></div>
@@ -57,7 +57,7 @@
 
   <div id="mapView">
     <div class="grid">
-      <div class="panel map-panel" id="mapPanel">
+      <div class="panel map-panel">
         <div class="panel-head">
           <h3 id="mapBreadcrumb" style="display:none; align-items:center; gap:8px;">
             <button id="btnBackCountry" class="back-btn" aria-label="Türkiye haritasına dön">← Türkiye</button>
@@ -101,7 +101,7 @@
             <button data-view="meclis">İlçe Meclisi</button>
           </div>
           <div class="detail-info-note" id="dInfoNote" style="display:none"></div>
-          <div class="detail-hero" id="detailHero">
+          <div class="detail-hero">
             <span class="detail-hero-label" id="dHeroLabel">Kazanan</span>
             <div class="detail-hero-row">
               <span class="dot" id="dHeroDot"></span>
@@ -109,7 +109,7 @@
               <span class="detail-hero-pct" id="dHeroPct"></span>
             </div>
           </div>
-          <div class="detail-stats" id="detailStats">
+          <div class="detail-stats">
             <div class="stat-row"><span class="l">Katılım</span><span class="v num" id="dTurnout"></span></div>
             <div class="stat-row"><span class="l">Seçmen</span><span class="v num" id="dSecmen"></span></div>
             <div class="stat-row"><span class="l">Geçerli oy</span><span class="v num" id="dGecerli"></span></div>
@@ -142,7 +142,7 @@
     </div>
   </div>
 
-  <section class="seatbar-card" id="seatbarCard">
+  <section class="seatbar-card">
     <div class="seatbar-head">
       <h2 id="seatbarTitle">Meclis Dağılımı</h2>
       <div class="sub" id="majoritySub"></div>

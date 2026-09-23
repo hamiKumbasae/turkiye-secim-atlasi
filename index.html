@@ -21,9 +21,7 @@
     --map-empty:#e2ded1;
     --map-stroke:#f6f4ef;
     --shadow: 0 1px 2px rgba(30,25,10,.04), 0 8px 24px -12px rgba(30,25,10,.18);
-    --p-akp:#f29418; --p-chp:#D80011; --p-ysgp:#840f99; --p-mhp:#3a6ea8;
-    --p-iyi:#36B4E6; --p-yrp:#1dab7a; --p-tip:#a11d3d; --p-diger:#9c7a2e;
-    --ok:#2f8f4e; --warn:#b8952f;
+    --ok:#2f8f4e;
 
     color-scheme: light;
   }
@@ -34,9 +32,7 @@
       --ink-1:#f1efe6; --ink-2:#c7c2b2; --ink-3:#8f8a78;
       --accent:#e8e3d4; --map-empty:#2c2a22; --map-stroke:#161512;
       --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
-      --p-akp:#dc8a3d; --p-chp:#e0485a; --p-ysgp:#c15fc4; --p-mhp:#4d8fe0;
-      --p-iyi:#2fb8d6; --p-yrp:#4caf50; --p-tip:#d1526e; --p-diger:#b5a06a;
-      --ok:#4caf6f; --warn:#d1ab52;
+      --ok:#4caf6f;
       color-scheme: dark;
     }
   }
@@ -46,9 +42,7 @@
     --ink-1:#f1efe6; --ink-2:#c7c2b2; --ink-3:#8f8a78;
     --accent:#e8e3d4; --map-empty:#2c2a22; --map-stroke:#161512;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
-    --p-akp:#dc8a3d; --p-chp:#e0485a; --p-ysgp:#c15fc4; --p-mhp:#4d8fe0;
-    --p-iyi:#2fb8d6; --p-yrp:#4caf50; --p-tip:#d1526e; --p-diger:#b5a06a;
-    --ok:#4caf6f; --warn:#d1ab52;
+    --ok:#4caf6f;
     color-scheme: dark;
   }
 
@@ -154,14 +148,14 @@
   .search-wrap input:focus{outline:none;}
 
   #mapSvg{width:100%; height:auto; display:block;}
-  .il-path{stroke:var(--map-stroke); stroke-width:1; cursor:pointer; transition:filter .1s;}
-  .il-path:hover{filter:brightness(1.12); stroke-width:1.6;}
-  .il-path.selected{stroke:var(--ink-1); stroke-width:2.2;}
+  .geo-path{stroke:var(--map-stroke); stroke-width:1; cursor:pointer; transition:filter .1s;}
+  .geo-path:hover{filter:brightness(1.12); stroke-width:1.6;}
+  .geo-path.selected{stroke:var(--ink-1); stroke-width:2.2;}
   /* Bu donem icin gercek sonucu olmayan ilce (orn. henuz kurulmamis modern
      ilce) - haritada bos birakmamak icin cizilir ama tiklanabilir/vurgulanir
      GORUNMEZ, yaniltici bir "veri var" izlenimi vermez. */
-  .il-path-nodata{cursor:default; opacity:.55;}
-  .il-path-nodata:hover{filter:none; stroke-width:1;}
+  .geo-path-nodata{cursor:default; opacity:.55;}
+  .geo-path-nodata:hover{filter:none; stroke-width:1;}
 
   .district-row-empty{cursor:default; opacity:.55;}
   .district-row-empty:hover{background:none;}
@@ -290,11 +284,11 @@
     </nav>
   </header>
 
-  <div class="tur-tabs" id="turToggle">
-    <button id="btnTurGenel">Genel Seçimler</button>
+  <div class="tur-tabs">
+    <button id="btnTurGenel" class="active">Genel Seçimler</button>
     <button id="btnTurYerel">Yerel Seçimler</button>
     <button id="btnTurReferandum">Referandumlar</button>
-    <button id="btnTurCB" class="active">Cumhurbaşkanlığı</button>
+    <button id="btnTurCB">Cumhurbaşkanlığı</button>
   </div>
 
   <div class="year-timeline" id="yearPicker"></div>
@@ -322,7 +316,7 @@
 
   <div id="mapView">
     <div class="grid">
-      <div class="panel map-panel" id="mapPanel">
+      <div class="panel map-panel">
         <div class="panel-head">
           <h3 id="mapBreadcrumb" style="display:none; align-items:center; gap:8px;">
             <button id="btnBackCountry" class="back-btn" aria-label="Türkiye haritasına dön">← Türkiye</button>
@@ -366,7 +360,7 @@
             <button data-view="meclis">İlçe Meclisi</button>
           </div>
           <div class="detail-info-note" id="dInfoNote" style="display:none"></div>
-          <div class="detail-hero" id="detailHero">
+          <div class="detail-hero">
             <span class="detail-hero-label" id="dHeroLabel">Kazanan</span>
             <div class="detail-hero-row">
               <span class="dot" id="dHeroDot"></span>
@@ -374,7 +368,7 @@
               <span class="detail-hero-pct" id="dHeroPct"></span>
             </div>
           </div>
-          <div class="detail-stats" id="detailStats">
+          <div class="detail-stats">
             <div class="stat-row"><span class="l">Katılım</span><span class="v num" id="dTurnout"></span></div>
             <div class="stat-row"><span class="l">Seçmen</span><span class="v num" id="dSecmen"></span></div>
             <div class="stat-row"><span class="l">Geçerli oy</span><span class="v num" id="dGecerli"></span></div>
@@ -407,7 +401,7 @@
     </div>
   </div>
 
-  <section class="seatbar-card" id="seatbarCard">
+  <section class="seatbar-card">
     <div class="seatbar-head">
       <h2 id="seatbarTitle">Meclis Dağılımı</h2>
       <div class="sub" id="majoritySub"></div>
@@ -451,7 +445,11 @@
   const $ = (s,el=document) => el.querySelector(s);
   const $$ = (s,el=document) => [...el.querySelectorAll(s)];
   const fmt = n => n==null ? '—' : n.toLocaleString('tr-TR');
-  const fmt1 = n => n==null ? '—' : n.toLocaleString('tr-TR',{maximumFractionDigits:1,minimumFractionDigits:1});
+  // Veri kaynagi (YSK/TUIK/vb.) su an her zaman temiz (< > & " icermiyor,
+  // dogrulandi), ama isim/parti alanlarini innerHTML'e gomerken yine de
+  // kacis uygulanir - veri kaynagi ileride degisirse bu tek satir korur.
+  const ESCAPE_MAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+  const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ESCAPE_MAP[c]);
 
   // Veri ayri statik JSON dosyalari olarak fetch() ile okunuyor. Yollar
   // sayfaya gore (relative, basinda / yok) - boylece hem yerelde hem GitHub
@@ -553,7 +551,7 @@
   const CB_YEAR_LABEL = {'2023cb2tur':'2023 (2.Tur)','2023cb1tur':'2023 (1.Tur)','2018cb':'2018','2014cb':'2014'};
 
 
-  let currentTur = 'cumhurbaskanligi';
+  let currentTur = 'genel'; // app.js'in acilista cagirdigi switchTur('genel') ile ayni olmali
   let DATA, MAJOR, ilByPlaka, districtsByPlaka, districtByGeomId, currentYear;
 
   function partyColor(name){
@@ -601,6 +599,25 @@
     return result.oy!=null ? fmt(result.oy)+' oy' : '—';
   }
 
+  // Bir parti anahtarinin GOSTERIM adi ('PARTY[x] ? PARTY[x].short : x' -
+  // eskiden 15 farkli yerde tekrar tekrar yazilmisti, artik TEK yerden).
+  function partyShort(name){
+    return PARTY[name] ? PARTY[name].short : name;
+  }
+
+  // Tablo/tooltip basliklarinda "%" mi "vekil/sandalye sayisi" mi
+  // gosterilecegini belirleyen kosul - eskiden table.js/tooltip.js'te
+  // ayri ayri (ama birebir ayni) tanimlanmisti.
+  function isOranMode(){
+    return DATA.tur==='referandum' || DATA.tur==='yerel' || DATA.tur==='cumhurbaskanligi' || YEARS_NO_VEKIL.has(currentYear);
+  }
+
+  // Bu secimde ayrica bir "yurtdisi" paneli gosterilecek mi - eskiden
+  // seatbar.js/summary.js'te ayri ayri (ama birebir ayni) tanimlanmisti.
+  function hasYurtdisiData(){
+    return !!(DATA.yurtdisi && DATA.yurtdisi.oy && Object.keys(DATA.yurtdisi.oy).length);
+  }
+
 
   // ---------------- national seat bar (genel secim) / evet-hayir bar (referandum) ----------------
   function renderSeatBar(){
@@ -637,7 +654,7 @@
       if(n<=0) continue;
       const item = document.createElement('div'); item.className='legend-item';
       item.innerHTML = '<span class="swatch" style="background:'+partyColor(party)+'"></span>'+
-        '<span class="n">'+n+'</span><b>'+(PARTY[party]?PARTY[party].short:party)+'</b>';
+        '<span class="n">'+n+'</span><b>'+escapeHtml(partyShort(party))+'</b>';
       legend.appendChild(item);
     }
   }
@@ -686,8 +703,7 @@
     // Bu toplam sadece DATA.iller'den (yurt ici) geliyor - yurtdisi secmeni
     // olan secimlerde "Ulusal" baslik yaniltici olur (bkz. renderNationalSummary
     // ayni gerekce).
-    const hasYurtdisi = !!(DATA.yurtdisi && DATA.yurtdisi.oy && Object.keys(DATA.yurtdisi.oy).length);
-    $('#seatbarTitle').textContent = hasYurtdisi ? 'Yurt İçi Oy Dağılımı' : 'Ulusal Oy Dağılımı';
+    $('#seatbarTitle').textContent = hasYurtdisiData() ? 'Yurt İçi Oy Dağılımı' : 'Ulusal Oy Dağılımı';
     $('#majoritySub').textContent = 'Kazanmak için geçerli oyların yarısından fazlası gerekir';
     for(const cand of MAJOR){
       const n = totals[cand] || 0;
@@ -710,7 +726,7 @@
       const pct = grand ? n/grand*100 : 0;
       const item = document.createElement('div'); item.className='legend-item';
       item.innerHTML = '<span class="swatch" style="background:'+partyColor(cand)+'"></span>'+
-        '<span class="n">%'+pct.toFixed(2)+'</span><b>'+(PARTY[cand]?PARTY[cand].short:cand)+'</b>';
+        '<span class="n">%'+pct.toFixed(2)+'</span><b>'+escapeHtml(partyShort(cand))+'</b>';
       legend.appendChild(item);
     }
   }
@@ -741,7 +757,7 @@
       if(n<=0) continue;
       const item = document.createElement('div'); item.className='legend-item';
       item.innerHTML = '<span class="swatch" style="background:'+partyColor(party)+'"></span>'+
-        '<span class="n">'+n+'</span><b>'+(PARTY[party]?PARTY[party].short:party)+'</b>';
+        '<span class="n">'+n+'</span><b>'+escapeHtml(partyShort(party))+'</b>';
       legend.appendChild(item);
     }
   }
@@ -776,7 +792,7 @@
       if(n<=0) continue;
       const item = document.createElement('div'); item.className='legend-item';
       item.innerHTML = '<span class="swatch" style="background:'+partyColor(party)+'"></span>'+
-        '<span class="n">'+n+'</span><b>'+(PARTY[party]?PARTY[party].short:party)+'</b>';
+        '<span class="n">'+n+'</span><b>'+escapeHtml(partyShort(party))+'</b>';
       legend.appendChild(item);
     }
   }
@@ -802,7 +818,7 @@
     for(const [name, info] of entries){
       const item = document.createElement('div'); item.className='legend-item';
       item.innerHTML = '<span class="swatch" style="background:'+partyColor(name)+'"></span>'+
-        '<span class="n">%'+info.oran.toFixed(2)+'</span><b>'+(PARTY[name]?PARTY[name].short:name)+'</b>';
+        '<span class="n">%'+info.oran.toFixed(2)+'</span><b>'+escapeHtml(partyShort(name))+'</b>';
       legend.appendChild(item);
     }
   }
@@ -875,7 +891,7 @@
     // renderYurtdisiCard). O yuzden bu secimde yurtdisi verisi VARSA
     // etiketleri "Yurt İçi ..." yaparak yaniltici bir "ulusal toplam"
     // izlenimi vermiyoruz.
-    const hasYurtdisi = !!(DATA.yurtdisi && DATA.yurtdisi.oy && Object.keys(DATA.yurtdisi.oy).length);
+    const hasYurtdisi = hasYurtdisiData();
     const items = [
       [hasYurtdisi ? 'Yurt İçi Katılım' : 'Katılım', katilim!=null ? '%'+katilim.toFixed(2) : '—'],
       [hasYurtdisi ? 'Yurt İçi Seçmen' : 'Seçmen', secmen ? fmt(secmen) : '—'],
@@ -895,7 +911,7 @@
     const lv = computeLevels();
     let html = '';
     html += '<div class="drawer-section-title">Bu seçim</div>';
-    html += '<p><b>'+DATA.ad+' '+($('#eyebrowText').textContent)+'</b></p>';
+    html += '<p><b>'+escapeHtml(DATA.ad+' '+$('#eyebrowText').textContent)+'</b></p>';
     html += '<div class="dr-row"><span>Kaynak durumu</span><span class="dr-badge"><span class="dot" style="background:'+(src.cat==='secondary'?'var(--ink-3)':src.cat==='mixed'?'var(--ink-3)':'var(--ok)')+'"></span>'+src.badge+'</span></div>';
     html += '<div class="dr-row"><span>İl kayıtları</span><span>'+DATA.iller.length+'</span></div>';
     html += '<div class="dr-row"><span>İlçe kayıtları (oy verisiyle)</span><span>'+lv.ilceWithData+' / '+lv.ilceTotal+'</span></div>';
@@ -1012,7 +1028,7 @@
     const sel = $('#partySelect'); sel.innerHTML='';
     for(const name of MAJOR){
       const opt = document.createElement('option');
-      opt.value = name; opt.textContent = PARTY[name] ? PARTY[name].short : name;
+      opt.value = name; opt.textContent = partyShort(name);
       sel.appendChild(opt);
     }
     currentMapParty = MAJOR[0] || null;
@@ -1021,8 +1037,7 @@
   function setMapMode(mode){
     currentMapMode = mode;
     $$('#modeGroup button').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
-    $('#partySelect').style.display = mode==='parti' ? '' : 'none';
-    applyMapMode();
+    applyMapMode(); // #partySelect gorunurlugu de burada, mode'a gore ayarlanir
   }
   // council_seats/mixed (1950/1955 yerel): oy oranlari ile sandalye paylari
   // AYNI renk skalasinda karsilastirilamaz (biri gercek oy yuzdesi, digeri
@@ -1037,9 +1052,12 @@
     setMapMode('winner');
   }
   $$('#modeGroup button').forEach(b=>{
-    b.addEventListener('click', ()=> setMapMode(b.dataset.mode));
+    // meclis-ilce gorunumunde bu dugmeler gizli (bkz. renderMeclisIlceMap) ama
+    // yine de tiklanirsa yanlis (belediye baskanligi) veriyle renklendirme
+    // yapmasin diye burada da korunur.
+    b.addEventListener('click', ()=> { if(view.level!=='meclis-ilce') setMapMode(b.dataset.mode); });
   });
-  $('#partySelect').addEventListener('change', e=>{ currentMapParty = e.target.value; applyMapMode(); });
+  $('#partySelect').addEventListener('change', e=>{ if(view.level!=='meclis-ilce'){ currentMapParty = e.target.value; applyMapMode(); } });
 
   // hex/renk stringini hue'ya cevirir (parti oran gradyani icin) - canvas
   // normalizasyonu kullanir, boylece partiler.json'daki her renk formati
@@ -1070,7 +1088,7 @@
     const wrap = $('#winnerLegend');
     if(!names.length){ wrap.innerHTML=''; return; }
     wrap.innerHTML = names.map(n=>
-      '<span class="wl-item"><span class="swatch" style="background:'+partyColor(n)+'"></span>'+(PARTY[n]?PARTY[n].short:n)+'</span>'
+      '<span class="wl-item"><span class="swatch" style="background:'+partyColor(n)+'"></span>'+escapeHtml(partyShort(n))+'</span>'
     ).join('');
   }
 
@@ -1082,7 +1100,7 @@
       const plaka = f.properties.plaka;
       const el = document.createElementNS(NS,'path');
       el.setAttribute('d', geomToPath(countryProject, f.geometry));
-      el.setAttribute('class','il-path');
+      el.setAttribute('class','geo-path');
       el.dataset.plaka = plaka;
       el.addEventListener('mousemove', e=>showTooltip(e, {kind:'il', plaka}));
       el.addEventListener('mouseleave', hideTooltip);
@@ -1161,7 +1179,7 @@
       for(const f of fallbackFeats){
         const el = document.createElementNS(NS,'path');
         el.setAttribute('d', geomToPath(project, f.geometry));
-        el.setAttribute('class','il-path');
+        el.setAttribute('class','geo-path');
         el.setAttribute('fill', p && p.kazanan ? partyColor(p.kazanan) : 'var(--map-empty)');
         el.dataset.plaka = plaka;
         el.addEventListener('mousemove', e=>showTooltip(e, {kind:'il', plaka}));
@@ -1174,12 +1192,12 @@
       const geomId = f.properties.id;
       const el = document.createElementNS(NS,'path');
       el.setAttribute('d', geomToPath(project, f.geometry));
-      el.setAttribute('class','il-path il-path-nodata');
+      el.setAttribute('class','geo-path geo-path-nodata');
       el.setAttribute('fill','var(--map-empty)');
       el.dataset.geomId = geomId;
       el.addEventListener('mousemove', e=>{
         const d = districtByGeomId[geomId];
-        tip.innerHTML = '<b>'+(d?d.ad:'')+'</b><div class="row"><span>Bu dönem için veri yok</span></div>';
+        tip.innerHTML = '<b>'+escapeHtml(d?d.ad:'')+'</b><div class="row"><span>Bu dönem için veri yok</span></div>';
         positionTip(e);
       });
       el.addEventListener('mouseleave', hideTooltip);
@@ -1190,7 +1208,7 @@
       const geomId = f.properties.id;
       const el = document.createElementNS(NS,'path');
       el.setAttribute('d', geomToPath(project, f.geometry));
-      el.setAttribute('class','il-path');
+      el.setAttribute('class','geo-path');
       el.dataset.geomId = geomId;
       el.addEventListener('mousemove', e=>showTooltip(e, {kind:'ilce', plaka, geomId}));
       el.addEventListener('mouseleave', hideTooltip);
@@ -1254,7 +1272,7 @@
     for(const r of rows){
       const el = document.createElementNS(NS,'path');
       el.setAttribute('d', geomToPath(project, r.geometry));
-      el.setAttribute('class','il-path');
+      el.setAttribute('class','geo-path');
       el.dataset.mahalleId = r.id;
       el.addEventListener('mousemove', e=>showTooltip(e, {kind:'mahalle', mahalleId:r.id}));
       el.addEventListener('mouseleave', hideTooltip);
@@ -1284,6 +1302,12 @@
   }
   function applyMapMode(){
     const mode = currentMapMode;
+    // Bu fonksiyon sadece Kazanan/Katilim/Parti modlarini destekleyen
+    // gorunumlerden (ulke/il/mahalle) cagrilir - meclis-ilce gorunumu bu
+    // kontrolleri kendisi gizler (bkz. renderMeclisIlceMap), buraya her
+    // gelinişte tekrar gorunur yapilir.
+    $('#modeGroup').style.display='';
+    $('#partySelect').style.display = mode==='parti' ? '' : 'none';
     $('#seqLegendWrap').style.display = (mode==='winner') ? 'none' : 'flex';
     const entities = view.level==='country' ? DATA.iller : (view.level==='mahalle' ? currentMahalleRows : (districtsByPlaka[view.plaka]||[]));
     const pathFor = view.level==='country' ? (e=>pathByPlaka[e.plaka])
@@ -1346,21 +1370,20 @@
       if(!obj){ tip.innerHTML = '<b>Veri eşleşmedi</b>'; positionTip(e); return; }
       name = obj.ad; sandikVal = obj.sandik;
     }
-    let html = '<b>'+name+'</b>';
-    const isOranTip = DATA.tur === 'referandum' || DATA.tur === 'yerel' || DATA.tur === 'cumhurbaskanligi' || YEARS_NO_VEKIL.has(currentYear);
+    let html = '<b>'+escapeHtml(name)+'</b>';
     if(mode==='winner'){
       const wOy = obj.oy[obj.kazanan];
       const wSeatBased = isSeatBased(wOy);
-      const partyLabel = obj.kazanan ? (PARTY[obj.kazanan]?PARTY[obj.kazanan].short:obj.kazanan) : '—';
+      const partyLabel = obj.kazanan ? escapeHtml(partyShort(obj.kazanan)) : '—';
       const rowLabel = wSeatBased ? ('Meclis çoğunluğu: '+partyLabel) : (partyLabel+' önde');
       const seatInfo = wSeatBased ? (resultPercentLabel(wOy)+' meclis payı'+(wOy.sandalye!=null?' · '+wOy.sandalye+' sandalye':''))
-        : isOranTip ? (resultPercentLabel(wOy)+(wOy?' · '+resultQuantity(wOy):''))
+        : isOranMode() ? (resultPercentLabel(wOy)+(wOy?' · '+resultQuantity(wOy):''))
         : (info.kind==='il' ? (obj.toplamVekil+' vekil') : ('ilçe kazananı'));
       html += '<div class="row"><span>'+rowLabel+'</span><span>'+seatInfo+'</span></div>';
     } else if(mode==='parti'){
       const key = currentMapParty;
       const o = obj.oy[key];
-      html += '<div class="row"><span>'+(PARTY[key]?PARTY[key].short:key)+'</span><span>'+resultPercentLabel(o)+(o?' · '+resultQuantity(o):'')+'</span></div>';
+      html += '<div class="row"><span>'+escapeHtml(partyShort(key))+'</span><span>'+resultPercentLabel(o)+(o?' · '+resultQuantity(o):'')+'</span></div>';
     } else {
       html += '<div class="row"><span>Katılım</span><span>'+(obj.katilim!=null?'%'+obj.katilim.toFixed(2):'—')+'</span></div>';
     }
@@ -1406,12 +1429,12 @@
   // tooltip.js/table.js/map.js ile AYNI mantik) - burada tekrar tanimlanmiyor.
 
   function partyRowEl(r){
-    const short = PARTY[r.name] ? PARTY[r.name].short : r.name;
+    const short = partyShort(r.name);
     const pct = resultPercent(r.oy) || 0;
     const el = document.createElement('div'); el.className='party-row';
     el.innerHTML = '<div class="prow-top">'+
         '<span class="dot" style="background:'+partyColor(r.name)+'"></span>'+
-        '<span class="name">'+short+'</span>'+
+        '<span class="name">'+escapeHtml(short)+'</span>'+
         '<span class="pct">'+resultPercentLabel(r.oy)+'</span>'+
         '<span class="oy">'+resultQuantity(r.oy)+'</span>'+
         (r.vekil>0 ? '<span class="vekil">'+r.vekil+'</span>' : '')+
@@ -1423,7 +1446,7 @@
   function selectProvince(plaka){
     selectedPlaka = plaka;
     detailView = 'baskanlik';
-    $$('.il-path').forEach(p=>p.classList.toggle('selected', +p.dataset.plaka===plaka));
+    $$('.geo-path').forEach(p=>p.classList.toggle('selected', +p.dataset.plaka===plaka));
     const p = ilByPlaka[plaka]; if(!p) return;
     $('#detailEmpty').style.display='none';
     $('#detailBody').style.display='block';
@@ -1447,7 +1470,7 @@
       : isIndirectElection ? 'Belediye Meclisi Seçiminde Birinci'
       : 'Kazanan';
     const heroPct = heroOy ? resultPercent(heroOy) : null;
-    setHero(heroLabel, p.kazanan && PARTY[p.kazanan]?PARTY[p.kazanan].short:p.kazanan, p.kazanan, heroPct);
+    setHero(heroLabel, p.kazanan && partyShort(p.kazanan), p.kazanan, heroPct);
 
     // council_seats (1950): TUM iller sandalye-bazli, tek aciklama yeterli.
     // mixed (1955): bazi illerde gercek oy sayisi da biliniyor - kullaniciya
@@ -1516,7 +1539,7 @@
   }
 
   function selectMahalle(row, plaka, geomId){
-    $$('.il-path').forEach(p=>p.classList.toggle('selected', p.dataset.mahalleId===row.id));
+    $$('.geo-path').forEach(p=>p.classList.toggle('selected', p.dataset.mahalleId===row.id));
     const p = ilByPlaka[plaka];
     const d = districtByGeomId[geomId];
     $('#detailEmpty').style.display='none';
@@ -1527,7 +1550,7 @@
     $('#dPlaka').textContent = [d?d.ad:null, p?p.ad:null].filter(Boolean).join(', ');
 
     const heroOy = row.kazanan ? row.oy[row.kazanan] : null;
-    setHero('Kazanan', row.kazanan && PARTY[row.kazanan]?PARTY[row.kazanan].short:row.kazanan, row.kazanan, heroOy ? resultPercent(heroOy) : null);
+    setHero('Kazanan', row.kazanan && partyShort(row.kazanan), row.kazanan, heroOy ? resultPercent(heroOy) : null);
 
     const gecerli = Object.values(row.oy||{}).reduce((s,o)=>s+(o.oy||0),0);
     $('#dSeatsLabel').textContent = 'Sandık';
@@ -1568,12 +1591,12 @@
     for(const d of withData){
       const row = document.createElement('div'); row.className='district-row';
       if(d.geomId) row.dataset.geomId = d.geomId;
-      const short = d.kazanan ? (PARTY[d.kazanan]?PARTY[d.kazanan].short:d.kazanan) : '—';
+      const short = d.kazanan ? partyShort(d.kazanan) : '—';
       const dOy = d.oy[d.kazanan];
       const dPctLabel = dOy ? resultPercentLabel(dOy) : '—';
       const dInfo = dOy ? ((dPctLabel!=='—' ? dPctLabel+' · ' : '')+resultQuantity(dOy)) : '–';
-      row.innerHTML = '<span class="dname">'+d.ad+'</span>'+
-        '<span class="dwinner"><span class="ddot" style="background:'+(d.kazanan?partyColor(d.kazanan):'var(--map-empty)')+'"></span>'+short+' · '+dInfo+'</span>';
+      row.innerHTML = '<span class="dname">'+escapeHtml(d.ad)+'</span>'+
+        '<span class="dwinner"><span class="ddot" style="background:'+(d.kazanan?partyColor(d.kazanan):'var(--map-empty)')+'"></span>'+escapeHtml(short)+' · '+dInfo+'</span>';
       if(d.geomId && pathByGeomId[d.geomId]){
         row.addEventListener('mouseenter', ()=> pathByGeomId[d.geomId].classList.add('selected'));
         row.addEventListener('mouseleave', ()=> pathByGeomId[d.geomId].classList.remove('selected'));
@@ -1595,13 +1618,13 @@
     for(const d of withoutData){
       const row = document.createElement('div'); row.className='district-row district-row-empty';
       if(d.geomId) row.dataset.geomId = d.geomId;
-      row.innerHTML = '<span class="dname">'+d.ad+'</span><span class="dwinner">Veri yok</span>';
+      row.innerHTML = '<span class="dname">'+escapeHtml(d.ad)+'</span><span class="dwinner">Veri yok</span>';
       el.appendChild(row);
     }
   }
 
   function selectDistrict(d, plaka){
-    $$('.il-path').forEach(p=>p.classList.toggle('selected', p.dataset.geomId===d.geomId));
+    $$('.geo-path').forEach(p=>p.classList.toggle('selected', p.dataset.geomId===d.geomId));
     $$('.district-row').forEach(r=>r.classList.toggle('dselected', r.dataset.geomId===d.geomId));
     const p = ilByPlaka[plaka];
     $('#detailEmpty').style.display='none';
@@ -1613,7 +1636,7 @@
 
     const heroOy = d.kazanan ? d.oy[d.kazanan] : null;
     const heroLabel = DATA.tur==='referandum' ? 'Sonuç' : 'Kazanan';
-    setHero(heroLabel, d.kazanan && PARTY[d.kazanan]?PARTY[d.kazanan].short:d.kazanan, d.kazanan, heroOy ? resultPercent(heroOy) : null);
+    setHero(heroLabel, d.kazanan && partyShort(d.kazanan), d.kazanan, heroOy ? resultPercent(heroOy) : null);
 
     // Milletvekili sandalyesi il duzeyinde tahsis edilir (secim cevresi = il),
     // ilce kaydinin toplamVekil'i anlamsizdir (hep 0) - bunun yerine ilcenin
@@ -1640,9 +1663,9 @@
       const m = MECLIS_2024[d.geomId];
       const row = document.createElement('div'); row.className='district-row';
       row.dataset.geomId = d.geomId;
-      const short = m ? (PARTY[m.kazanan]?PARTY[m.kazanan].short:m.kazanan) : '—';
-      row.innerHTML = '<span class="dname">'+d.ad+'</span>'+
-        '<span class="dwinner"><span class="ddot" style="background:'+(m?partyColor(m.kazanan):'var(--map-empty)')+'"></span>'+short+(m&&m.toplam?' · '+m.toplam+' üye':'')+'</span>';
+      const short = m ? partyShort(m.kazanan) : '—';
+      row.innerHTML = '<span class="dname">'+escapeHtml(d.ad)+'</span>'+
+        '<span class="dwinner"><span class="ddot" style="background:'+(m?partyColor(m.kazanan):'var(--map-empty)')+'"></span>'+escapeHtml(short)+(m&&m.toplam?' · '+m.toplam+' üye':'')+'</span>';
       row.addEventListener('click', ()=> renderMeclisIlceMap(plaka, d.geomId));
       el.appendChild(row);
     }
@@ -1665,15 +1688,15 @@
   }
 
   function renderMeclisIlceMap(plaka, geomId){
-    view = {level:'meclis-ilce', plaka, geomId};
     const f = geoFeatureById[geomId];
-    if(!f) return;
+    if(!f) return; // view SONRA degisir - basarisiz cagri onceki gorunumu bozmamali
+    view = {level:'meclis-ilce', plaka, geomId};
     const project = computeProjection([f], PAD);
     svg.innerHTML = '';
     pathByPlaka = {}; pathByGeomId = {};
     const el = document.createElementNS(NS,'path');
     el.setAttribute('d', geomToPath(project, f.geometry));
-    el.setAttribute('class','il-path selected');
+    el.setAttribute('class','geo-path selected');
     el.dataset.geomId = geomId;
     el.addEventListener('mousemove', e=>showTooltip(e, {kind:'ilce', plaka, geomId}));
     el.addEventListener('mouseleave', hideTooltip);
@@ -1689,12 +1712,19 @@
     $('#mapTitleCountry').style.display='none';
     $('#mapBreadcrumbName').textContent = (p?p.ad:'')+' — '+(d?d.ad:'')+' — 2024 İlçe Meclisi';
     $('#searchBox').value='';
+    $('#searchBox').placeholder='İlçe meclisi ara…';
+    // Bu gorunumde Kazanan/Katilim/Parti modlari anlamsiz (tek ilce, tek renk,
+    // meclis coğunluğu) - applyMapMode() hic cagrilmadigi icin bu kontroller
+    // ve onceki gorunumden kalma lejant elle temizlenir/gizlenir.
+    $('#modeGroup').style.display='none';
+    $('#partySelect').style.display='none';
     $('#seqLegendWrap').style.display='none';
+    $('#winnerLegend').innerHTML='';
     selectMeclisIlce(geomId, plaka);
   }
 
   function selectMeclisIlce(geomId, plaka){
-    $$('.il-path').forEach(p=>p.classList.toggle('selected', p.dataset.geomId===geomId));
+    $$('.geo-path').forEach(p=>p.classList.toggle('selected', p.dataset.geomId===geomId));
     const m = MECLIS_2024[geomId];
     const p = ilByPlaka[plaka];
     $('#detailEmpty').style.display='none';
@@ -1719,7 +1749,7 @@
     $('#dName').textContent = m.ad;
     $('#dPlaka').textContent = (p?p.ad:'')+' — 2024 İlçe Meclisi';
     const majPct = m.toplam ? (m.partiler[m.kazanan]||0)/m.toplam*100 : null;
-    setHero('Çoğunluk', PARTY[m.kazanan] ? PARTY[m.kazanan].short : m.kazanan, m.kazanan, majPct);
+    setHero('Çoğunluk', partyShort(m.kazanan), m.kazanan, majPct);
     $('#dTurnout').textContent = '—'; $('#dSecmen').textContent = '—'; $('#dGecerli').textContent = '—';
     $('#dSeatsLabel').textContent = 'Üye'; $('#dSeats').textContent = m.toplam;
     hideEmptyStatRows();
@@ -1755,8 +1785,12 @@
     } else if(view.level==='mahalle'){
       const match = currentMahalleRows.find(r=>r.ad.toLocaleLowerCase('tr').startsWith(q));
       if(match && pathByMahalleId[match.id]){
-        $$('.il-path').forEach(p=>p.classList.toggle('selected', p===pathByMahalleId[match.id]));
+        $$('.geo-path').forEach(p=>p.classList.toggle('selected', p===pathByMahalleId[match.id]));
       }
+    } else if(view.level==='meclis-ilce'){
+      const list = districtsByPlaka[view.plaka]||[];
+      const match = list.find(d=>d.ad.toLocaleLowerCase('tr').startsWith(q));
+      if(match && match.geomId) renderMeclisIlceMap(view.plaka, match.geomId);
     } else {
       const list = districtsByPlaka[view.plaka]||[];
       const match = list.find(d=>d.ad.toLocaleLowerCase('tr').startsWith(q));
@@ -1769,11 +1803,17 @@
   $('#btnBackCountry').addEventListener('click', ()=>{
     $('#searchBox').value='';
     renderCountryMap();
-    if(selectedPlaka) $$('.il-path').forEach(p=>p.classList.toggle('selected', +p.dataset.plaka===selectedPlaka));
+    if(selectedPlaka) $$('.geo-path').forEach(p=>p.classList.toggle('selected', +p.dataset.plaka===selectedPlaka));
   });
 
   $('#btnBackProvince').addEventListener('click', ()=>{
-    if(view.plaka!=null){ renderProvinceMap(view.plaka); selectProvince(view.plaka); }
+    if(view.plaka==null) return;
+    renderProvinceMap(view.plaka);
+    // meclis-ilce'den geri donuluyorsa "İlçe Meclisi" sekmesine donulmeli,
+    // yoksa selectProvince'in varsayilan sifirlamasi kullaniciyi yanlislikla
+    // "Belediye Başkanlığı" sekmesine atar (bkz. son inceleme).
+    if(detailView==='meclis') renderMeclisOverview(view.plaka);
+    else selectProvince(view.plaka);
   });
 
   // ---------------- view toggle ----------------
@@ -1793,12 +1833,11 @@
   $('#tableSearch').addEventListener('input', e=>{ tableFilter = e.target.value; renderTable(); });
   function renderTableHead(){
     const headRow = $('#ilTableHeadRow');
-    const oranModeHead = DATA.tur === 'referandum' || DATA.tur === 'yerel' || DATA.tur === 'cumhurbaskanligi' || YEARS_NO_VEKIL.has(currentYear);
-    const cols = oranModeHead
-      ? [['ad','İl'], ...MAJOR.map(m=>[m, (PARTY[m]?PARTY[m].short:m)+' %']), ['katilim','Katılım %'], ['secmen','Seçmen']]
-      : [['ad','İl'], ['toplamVekil','Toplam Vekil'], ...MAJOR.map(m=>[m, PARTY[m]?PARTY[m].short:m]),
+    const cols = isOranMode()
+      ? [['ad','İl'], ...MAJOR.map(m=>[m, partyShort(m)+' %']), ['katilim','Katılım %'], ['secmen','Seçmen']]
+      : [['ad','İl'], ['toplamVekil','Toplam Vekil'], ...MAJOR.map(m=>[m, partyShort(m)]),
          ['katilim','Katılım %'], ['secmen','Seçmen']];
-    headRow.innerHTML = cols.map(([key,label])=>'<th data-key="'+key+'">'+label+'</th>').join('');
+    headRow.innerHTML = cols.map(([key,label])=>'<th data-key="'+key+'">'+escapeHtml(label)+'</th>').join('');
     $$('#ilTable th').forEach(th=>{
       th.addEventListener('click', ()=>{
         const key = th.dataset.key;
@@ -1808,7 +1847,7 @@
     });
   }
   function renderTable(){
-    const oranMode = DATA.tur === 'referandum' || DATA.tur === 'yerel' || DATA.tur === 'cumhurbaskanligi' || YEARS_NO_VEKIL.has(currentYear);
+    const oranMode = isOranMode();
     const defaultSort = oranMode ? MAJOR[0] : 'toplamVekil';
     if(!MAJOR.includes(sortKey) && !['ad','toplamVekil','katilim','secmen'].includes(sortKey)){
       sortKey = defaultSort; sortDir = -1;
@@ -1830,7 +1869,7 @@
       const tr = document.createElement('tr');
       // Parti yuzde hucrelerine, gercek oy sayisini da (hover ile) her zaman
       // erisilebilir tutmak icin title niteligi ekleniyor.
-      const adCell = '<span class="table-winner-dot" style="background:'+(p.kazanan?partyColor(p.kazanan):'var(--map-empty)')+'"></span>'+p.ad;
+      const adCell = '<span class="table-winner-dot" style="background:'+(p.kazanan?partyColor(p.kazanan):'var(--map-empty)')+'"></span>'+escapeHtml(p.ad);
       const cells = oranMode
         ? [[adCell,null], ...MAJOR.map(m=>{
             const r = p.oy[m]; const pct = resultPercent(r);
@@ -1840,7 +1879,7 @@
             const r = p.oy[m]; const pct = resultPercent(r);
             return [p.vekil[m]||'—', r ? resultQuantity(r)+(pct!=null?' · %'+pct.toFixed(2):'') : null];
           }), [p.katilim!=null?p.katilim.toFixed(2):'—', null], [fmt(p.secmen), null]];
-      tr.innerHTML = cells.map(([c,title],i)=>'<td'+(i===0?'':' class="num"')+(title?' title="'+title+'"':'')+'>'+c+'</td>').join('');
+      tr.innerHTML = cells.map(([c,title],i)=>'<td'+(i===0?'':' class="num"')+(title?' title="'+escapeHtml(title)+'"':'')+'>'+c+'</td>').join('');
       tr.style.cursor='pointer';
       tr.addEventListener('click', ()=>{ $('#btnMapView').click(); goToProvince(p.plaka); });
       body.appendChild(tr);

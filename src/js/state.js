@@ -1,4 +1,4 @@
-  let currentTur = 'cumhurbaskanligi';
+  let currentTur = 'genel'; // app.js'in acilista cagirdigi switchTur('genel') ile ayni olmali
   let DATA, MAJOR, ilByPlaka, districtsByPlaka, districtByGeomId, currentYear;
 
   function partyColor(name){

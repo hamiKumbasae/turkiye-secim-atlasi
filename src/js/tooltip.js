@@ -16,21 +16,20 @@
       if(!obj){ tip.innerHTML = '<b>Veri eşleşmedi</b>'; positionTip(e); return; }
       name = obj.ad; sandikVal = obj.sandik;
     }
-    let html = '<b>'+name+'</b>';
-    const isOranTip = DATA.tur === 'referandum' || DATA.tur === 'yerel' || DATA.tur === 'cumhurbaskanligi' || YEARS_NO_VEKIL.has(currentYear);
+    let html = '<b>'+escapeHtml(name)+'</b>';
     if(mode==='winner'){
       const wOy = obj.oy[obj.kazanan];
       const wSeatBased = isSeatBased(wOy);
-      const partyLabel = obj.kazanan ? (PARTY[obj.kazanan]?PARTY[obj.kazanan].short:obj.kazanan) : '—';
+      const partyLabel = obj.kazanan ? escapeHtml(partyShort(obj.kazanan)) : '—';
       const rowLabel = wSeatBased ? ('Meclis çoğunluğu: '+partyLabel) : (partyLabel+' önde');
       const seatInfo = wSeatBased ? (resultPercentLabel(wOy)+' meclis payı'+(wOy.sandalye!=null?' · '+wOy.sandalye+' sandalye':''))
-        : isOranTip ? (resultPercentLabel(wOy)+(wOy?' · '+resultQuantity(wOy):''))
+        : isOranMode() ? (resultPercentLabel(wOy)+(wOy?' · '+resultQuantity(wOy):''))
         : (info.kind==='il' ? (obj.toplamVekil+' vekil') : ('ilçe kazananı'));
       html += '<div class="row"><span>'+rowLabel+'</span><span>'+seatInfo+'</span></div>';
     } else if(mode==='parti'){
       const key = currentMapParty;
       const o = obj.oy[key];
-      html += '<div class="row"><span>'+(PARTY[key]?PARTY[key].short:key)+'</span><span>'+resultPercentLabel(o)+(o?' · '+resultQuantity(o):'')+'</span></div>';
+      html += '<div class="row"><span>'+escapeHtml(partyShort(key))+'</span><span>'+resultPercentLabel(o)+(o?' · '+resultQuantity(o):'')+'</span></div>';
     } else {
       html += '<div class="row"><span>Katılım</span><span>'+(obj.katilim!=null?'%'+obj.katilim.toFixed(2):'—')+'</span></div>';
     }

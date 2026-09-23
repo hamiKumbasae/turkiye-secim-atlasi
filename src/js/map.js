@@ -86,7 +86,7 @@
     const sel = $('#partySelect'); sel.innerHTML='';
     for(const name of MAJOR){
       const opt = document.createElement('option');
-      opt.value = name; opt.textContent = PARTY[name] ? PARTY[name].short : name;
+      opt.value = name; opt.textContent = partyShort(name);
       sel.appendChild(opt);
     }
     currentMapParty = MAJOR[0] || null;
@@ -95,8 +95,7 @@
   function setMapMode(mode){
     currentMapMode = mode;
     $$('#modeGroup button').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
-    $('#partySelect').style.display = mode==='parti' ? '' : 'none';
-    applyMapMode();
+    applyMapMode(); // #partySelect gorunurlugu de burada, mode'a gore ayarlanir
   }
   // council_seats/mixed (1950/1955 yerel): oy oranlari ile sandalye paylari
   // AYNI renk skalasinda karsilastirilamaz (biri gercek oy yuzdesi, digeri
@@ -111,9 +110,12 @@
     setMapMode('winner');
   }
   $$('#modeGroup button').forEach(b=>{
-    b.addEventListener('click', ()=> setMapMode(b.dataset.mode));
+    // meclis-ilce gorunumunde bu dugmeler gizli (bkz. renderMeclisIlceMap) ama
+    // yine de tiklanirsa yanlis (belediye baskanligi) veriyle renklendirme
+    // yapmasin diye burada da korunur.
+    b.addEventListener('click', ()=> { if(view.level!=='meclis-ilce') setMapMode(b.dataset.mode); });
   });
-  $('#partySelect').addEventListener('change', e=>{ currentMapParty = e.target.value; applyMapMode(); });
+  $('#partySelect').addEventListener('change', e=>{ if(view.level!=='meclis-ilce'){ currentMapParty = e.target.value; applyMapMode(); } });
 
   // hex/renk stringini hue'ya cevirir (parti oran gradyani icin) - canvas
   // normalizasyonu kullanir, boylece partiler.json'daki her renk formati
@@ -144,7 +146,7 @@
     const wrap = $('#winnerLegend');
     if(!names.length){ wrap.innerHTML=''; return; }
     wrap.innerHTML = names.map(n=>
-      '<span class="wl-item"><span class="swatch" style="background:'+partyColor(n)+'"></span>'+(PARTY[n]?PARTY[n].short:n)+'</span>'
+      '<span class="wl-item"><span class="swatch" style="background:'+partyColor(n)+'"></span>'+escapeHtml(partyShort(n))+'</span>'
     ).join('');
   }
 
@@ -156,7 +158,7 @@
       const plaka = f.properties.plaka;
       const el = document.createElementNS(NS,'path');
       el.setAttribute('d', geomToPath(countryProject, f.geometry));
-      el.setAttribute('class','il-path');
+      el.setAttribute('class','geo-path');
       el.dataset.plaka = plaka;
       el.addEventListener('mousemove', e=>showTooltip(e, {kind:'il', plaka}));
       el.addEventListener('mouseleave', hideTooltip);
@@ -235,7 +237,7 @@
       for(const f of fallbackFeats){
         const el = document.createElementNS(NS,'path');
         el.setAttribute('d', geomToPath(project, f.geometry));
-        el.setAttribute('class','il-path');
+        el.setAttribute('class','geo-path');
         el.setAttribute('fill', p && p.kazanan ? partyColor(p.kazanan) : 'var(--map-empty)');
         el.dataset.plaka = plaka;
         el.addEventListener('mousemove', e=>showTooltip(e, {kind:'il', plaka}));
@@ -248,12 +250,12 @@
       const geomId = f.properties.id;
       const el = document.createElementNS(NS,'path');
       el.setAttribute('d', geomToPath(project, f.geometry));
-      el.setAttribute('class','il-path il-path-nodata');
+      el.setAttribute('class','geo-path geo-path-nodata');
       el.setAttribute('fill','var(--map-empty)');
       el.dataset.geomId = geomId;
       el.addEventListener('mousemove', e=>{
         const d = districtByGeomId[geomId];
-        tip.innerHTML = '<b>'+(d?d.ad:'')+'</b><div class="row"><span>Bu dönem için veri yok</span></div>';
+        tip.innerHTML = '<b>'+escapeHtml(d?d.ad:'')+'</b><div class="row"><span>Bu dönem için veri yok</span></div>';
         positionTip(e);
       });
       el.addEventListener('mouseleave', hideTooltip);
@@ -264,7 +266,7 @@
       const geomId = f.properties.id;
       const el = document.createElementNS(NS,'path');
       el.setAttribute('d', geomToPath(project, f.geometry));
-      el.setAttribute('class','il-path');
+      el.setAttribute('class','geo-path');
       el.dataset.geomId = geomId;
       el.addEventListener('mousemove', e=>showTooltip(e, {kind:'ilce', plaka, geomId}));
       el.addEventListener('mouseleave', hideTooltip);
@@ -328,7 +330,7 @@
     for(const r of rows){
       const el = document.createElementNS(NS,'path');
       el.setAttribute('d', geomToPath(project, r.geometry));
-      el.setAttribute('class','il-path');
+      el.setAttribute('class','geo-path');
       el.dataset.mahalleId = r.id;
       el.addEventListener('mousemove', e=>showTooltip(e, {kind:'mahalle', mahalleId:r.id}));
       el.addEventListener('mouseleave', hideTooltip);
@@ -358,6 +360,12 @@
   }
   function applyMapMode(){
     const mode = currentMapMode;
+    // Bu fonksiyon sadece Kazanan/Katilim/Parti modlarini destekleyen
+    // gorunumlerden (ulke/il/mahalle) cagrilir - meclis-ilce gorunumu bu
+    // kontrolleri kendisi gizler (bkz. renderMeclisIlceMap), buraya her
+    // gelinişte tekrar gorunur yapilir.
+    $('#modeGroup').style.display='';
+    $('#partySelect').style.display = mode==='parti' ? '' : 'none';
     $('#seqLegendWrap').style.display = (mode==='winner') ? 'none' : 'flex';
     const entities = view.level==='country' ? DATA.iller : (view.level==='mahalle' ? currentMahalleRows : (districtsByPlaka[view.plaka]||[]));
     const pathFor = view.level==='country' ? (e=>pathByPlaka[e.plaka])

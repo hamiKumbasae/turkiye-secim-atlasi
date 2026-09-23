@@ -28,12 +28,12 @@
   // tooltip.js/table.js/map.js ile AYNI mantik) - burada tekrar tanimlanmiyor.
 
   function partyRowEl(r){
-    const short = PARTY[r.name] ? PARTY[r.name].short : r.name;
+    const short = partyShort(r.name);
     const pct = resultPercent(r.oy) || 0;
     const el = document.createElement('div'); el.className='party-row';
     el.innerHTML = '<div class="prow-top">'+
         '<span class="dot" style="background:'+partyColor(r.name)+'"></span>'+
-        '<span class="name">'+short+'</span>'+
+        '<span class="name">'+escapeHtml(short)+'</span>'+
         '<span class="pct">'+resultPercentLabel(r.oy)+'</span>'+
         '<span class="oy">'+resultQuantity(r.oy)+'</span>'+
         (r.vekil>0 ? '<span class="vekil">'+r.vekil+'</span>' : '')+
@@ -45,7 +45,7 @@
   function selectProvince(plaka){
     selectedPlaka = plaka;
     detailView = 'baskanlik';
-    $$('.il-path').forEach(p=>p.classList.toggle('selected', +p.dataset.plaka===plaka));
+    $$('.geo-path').forEach(p=>p.classList.toggle('selected', +p.dataset.plaka===plaka));
     const p = ilByPlaka[plaka]; if(!p) return;
     $('#detailEmpty').style.display='none';
     $('#detailBody').style.display='block';
@@ -69,7 +69,7 @@
       : isIndirectElection ? 'Belediye Meclisi Seçiminde Birinci'
       : 'Kazanan';
     const heroPct = heroOy ? resultPercent(heroOy) : null;
-    setHero(heroLabel, p.kazanan && PARTY[p.kazanan]?PARTY[p.kazanan].short:p.kazanan, p.kazanan, heroPct);
+    setHero(heroLabel, p.kazanan && partyShort(p.kazanan), p.kazanan, heroPct);
 
     // council_seats (1950): TUM iller sandalye-bazli, tek aciklama yeterli.
     // mixed (1955): bazi illerde gercek oy sayisi da biliniyor - kullaniciya
@@ -138,7 +138,7 @@
   }
 
   function selectMahalle(row, plaka, geomId){
-    $$('.il-path').forEach(p=>p.classList.toggle('selected', p.dataset.mahalleId===row.id));
+    $$('.geo-path').forEach(p=>p.classList.toggle('selected', p.dataset.mahalleId===row.id));
     const p = ilByPlaka[plaka];
     const d = districtByGeomId[geomId];
     $('#detailEmpty').style.display='none';
@@ -149,7 +149,7 @@
     $('#dPlaka').textContent = [d?d.ad:null, p?p.ad:null].filter(Boolean).join(', ');
 
     const heroOy = row.kazanan ? row.oy[row.kazanan] : null;
-    setHero('Kazanan', row.kazanan && PARTY[row.kazanan]?PARTY[row.kazanan].short:row.kazanan, row.kazanan, heroOy ? resultPercent(heroOy) : null);
+    setHero('Kazanan', row.kazanan && partyShort(row.kazanan), row.kazanan, heroOy ? resultPercent(heroOy) : null);
 
     const gecerli = Object.values(row.oy||{}).reduce((s,o)=>s+(o.oy||0),0);
     $('#dSeatsLabel').textContent = 'Sandık';
@@ -190,12 +190,12 @@
     for(const d of withData){
       const row = document.createElement('div'); row.className='district-row';
       if(d.geomId) row.dataset.geomId = d.geomId;
-      const short = d.kazanan ? (PARTY[d.kazanan]?PARTY[d.kazanan].short:d.kazanan) : '—';
+      const short = d.kazanan ? partyShort(d.kazanan) : '—';
       const dOy = d.oy[d.kazanan];
       const dPctLabel = dOy ? resultPercentLabel(dOy) : '—';
       const dInfo = dOy ? ((dPctLabel!=='—' ? dPctLabel+' · ' : '')+resultQuantity(dOy)) : '–';
-      row.innerHTML = '<span class="dname">'+d.ad+'</span>'+
-        '<span class="dwinner"><span class="ddot" style="background:'+(d.kazanan?partyColor(d.kazanan):'var(--map-empty)')+'"></span>'+short+' · '+dInfo+'</span>';
+      row.innerHTML = '<span class="dname">'+escapeHtml(d.ad)+'</span>'+
+        '<span class="dwinner"><span class="ddot" style="background:'+(d.kazanan?partyColor(d.kazanan):'var(--map-empty)')+'"></span>'+escapeHtml(short)+' · '+dInfo+'</span>';
       if(d.geomId && pathByGeomId[d.geomId]){
         row.addEventListener('mouseenter', ()=> pathByGeomId[d.geomId].classList.add('selected'));
         row.addEventListener('mouseleave', ()=> pathByGeomId[d.geomId].classList.remove('selected'));
@@ -217,13 +217,13 @@
     for(const d of withoutData){
       const row = document.createElement('div'); row.className='district-row district-row-empty';
       if(d.geomId) row.dataset.geomId = d.geomId;
-      row.innerHTML = '<span class="dname">'+d.ad+'</span><span class="dwinner">Veri yok</span>';
+      row.innerHTML = '<span class="dname">'+escapeHtml(d.ad)+'</span><span class="dwinner">Veri yok</span>';
       el.appendChild(row);
     }
   }
 
   function selectDistrict(d, plaka){
-    $$('.il-path').forEach(p=>p.classList.toggle('selected', p.dataset.geomId===d.geomId));
+    $$('.geo-path').forEach(p=>p.classList.toggle('selected', p.dataset.geomId===d.geomId));
     $$('.district-row').forEach(r=>r.classList.toggle('dselected', r.dataset.geomId===d.geomId));
     const p = ilByPlaka[plaka];
     $('#detailEmpty').style.display='none';
@@ -235,7 +235,7 @@
 
     const heroOy = d.kazanan ? d.oy[d.kazanan] : null;
     const heroLabel = DATA.tur==='referandum' ? 'Sonuç' : 'Kazanan';
-    setHero(heroLabel, d.kazanan && PARTY[d.kazanan]?PARTY[d.kazanan].short:d.kazanan, d.kazanan, heroOy ? resultPercent(heroOy) : null);
+    setHero(heroLabel, d.kazanan && partyShort(d.kazanan), d.kazanan, heroOy ? resultPercent(heroOy) : null);
 
     // Milletvekili sandalyesi il duzeyinde tahsis edilir (secim cevresi = il),
     // ilce kaydinin toplamVekil'i anlamsizdir (hep 0) - bunun yerine ilcenin
@@ -262,9 +262,9 @@
       const m = MECLIS_2024[d.geomId];
       const row = document.createElement('div'); row.className='district-row';
       row.dataset.geomId = d.geomId;
-      const short = m ? (PARTY[m.kazanan]?PARTY[m.kazanan].short:m.kazanan) : '—';
-      row.innerHTML = '<span class="dname">'+d.ad+'</span>'+
-        '<span class="dwinner"><span class="ddot" style="background:'+(m?partyColor(m.kazanan):'var(--map-empty)')+'"></span>'+short+(m&&m.toplam?' · '+m.toplam+' üye':'')+'</span>';
+      const short = m ? partyShort(m.kazanan) : '—';
+      row.innerHTML = '<span class="dname">'+escapeHtml(d.ad)+'</span>'+
+        '<span class="dwinner"><span class="ddot" style="background:'+(m?partyColor(m.kazanan):'var(--map-empty)')+'"></span>'+escapeHtml(short)+(m&&m.toplam?' · '+m.toplam+' üye':'')+'</span>';
       row.addEventListener('click', ()=> renderMeclisIlceMap(plaka, d.geomId));
       el.appendChild(row);
     }
@@ -287,15 +287,15 @@
   }
 
   function renderMeclisIlceMap(plaka, geomId){
-    view = {level:'meclis-ilce', plaka, geomId};
     const f = geoFeatureById[geomId];
-    if(!f) return;
+    if(!f) return; // view SONRA degisir - basarisiz cagri onceki gorunumu bozmamali
+    view = {level:'meclis-ilce', plaka, geomId};
     const project = computeProjection([f], PAD);
     svg.innerHTML = '';
     pathByPlaka = {}; pathByGeomId = {};
     const el = document.createElementNS(NS,'path');
     el.setAttribute('d', geomToPath(project, f.geometry));
-    el.setAttribute('class','il-path selected');
+    el.setAttribute('class','geo-path selected');
     el.dataset.geomId = geomId;
     el.addEventListener('mousemove', e=>showTooltip(e, {kind:'ilce', plaka, geomId}));
     el.addEventListener('mouseleave', hideTooltip);
@@ -311,12 +311,19 @@
     $('#mapTitleCountry').style.display='none';
     $('#mapBreadcrumbName').textContent = (p?p.ad:'')+' — '+(d?d.ad:'')+' — 2024 İlçe Meclisi';
     $('#searchBox').value='';
+    $('#searchBox').placeholder='İlçe meclisi ara…';
+    // Bu gorunumde Kazanan/Katilim/Parti modlari anlamsiz (tek ilce, tek renk,
+    // meclis coğunluğu) - applyMapMode() hic cagrilmadigi icin bu kontroller
+    // ve onceki gorunumden kalma lejant elle temizlenir/gizlenir.
+    $('#modeGroup').style.display='none';
+    $('#partySelect').style.display='none';
     $('#seqLegendWrap').style.display='none';
+    $('#winnerLegend').innerHTML='';
     selectMeclisIlce(geomId, plaka);
   }
 
   function selectMeclisIlce(geomId, plaka){
-    $$('.il-path').forEach(p=>p.classList.toggle('selected', p.dataset.geomId===geomId));
+    $$('.geo-path').forEach(p=>p.classList.toggle('selected', p.dataset.geomId===geomId));
     const m = MECLIS_2024[geomId];
     const p = ilByPlaka[plaka];
     $('#detailEmpty').style.display='none';
@@ -341,7 +348,7 @@
     $('#dName').textContent = m.ad;
     $('#dPlaka').textContent = (p?p.ad:'')+' — 2024 İlçe Meclisi';
     const majPct = m.toplam ? (m.partiler[m.kazanan]||0)/m.toplam*100 : null;
-    setHero('Çoğunluk', PARTY[m.kazanan] ? PARTY[m.kazanan].short : m.kazanan, m.kazanan, majPct);
+    setHero('Çoğunluk', partyShort(m.kazanan), m.kazanan, majPct);
     $('#dTurnout').textContent = '—'; $('#dSecmen').textContent = '—'; $('#dGecerli').textContent = '—';
     $('#dSeatsLabel').textContent = 'Üye'; $('#dSeats').textContent = m.toplam;
     hideEmptyStatRows();

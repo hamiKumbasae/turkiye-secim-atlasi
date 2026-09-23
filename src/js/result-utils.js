@@ -35,3 +35,22 @@
     return result.oy!=null ? fmt(result.oy)+' oy' : '—';
   }
 
+  // Bir parti anahtarinin GOSTERIM adi ('PARTY[x] ? PARTY[x].short : x' -
+  // eskiden 15 farkli yerde tekrar tekrar yazilmisti, artik TEK yerden).
+  function partyShort(name){
+    return PARTY[name] ? PARTY[name].short : name;
+  }
+
+  // Tablo/tooltip basliklarinda "%" mi "vekil/sandalye sayisi" mi
+  // gosterilecegini belirleyen kosul - eskiden table.js/tooltip.js'te
+  // ayri ayri (ama birebir ayni) tanimlanmisti.
+  function isOranMode(){
+    return DATA.tur==='referandum' || DATA.tur==='yerel' || DATA.tur==='cumhurbaskanligi' || YEARS_NO_VEKIL.has(currentYear);
+  }
+
+  // Bu secimde ayrica bir "yurtdisi" paneli gosterilecek mi - eskiden
+  // seatbar.js/summary.js'te ayri ayri (ama birebir ayni) tanimlanmisti.
+  function hasYurtdisiData(){
+    return !!(DATA.yurtdisi && DATA.yurtdisi.oy && Object.keys(DATA.yurtdisi.oy).length);
+  }
+

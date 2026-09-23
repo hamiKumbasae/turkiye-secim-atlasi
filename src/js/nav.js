@@ -1,11 +1,17 @@
   $('#btnBackCountry').addEventListener('click', ()=>{
     $('#searchBox').value='';
     renderCountryMap();
-    if(selectedPlaka) $$('.il-path').forEach(p=>p.classList.toggle('selected', +p.dataset.plaka===selectedPlaka));
+    if(selectedPlaka) $$('.geo-path').forEach(p=>p.classList.toggle('selected', +p.dataset.plaka===selectedPlaka));
   });
 
   $('#btnBackProvince').addEventListener('click', ()=>{
-    if(view.plaka!=null){ renderProvinceMap(view.plaka); selectProvince(view.plaka); }
+    if(view.plaka==null) return;
+    renderProvinceMap(view.plaka);
+    // meclis-ilce'den geri donuluyorsa "İlçe Meclisi" sekmesine donulmeli,
+    // yoksa selectProvince'in varsayilan sifirlamasi kullaniciyi yanlislikla
+    // "Belediye Başkanlığı" sekmesine atar (bkz. son inceleme).
+    if(detailView==='meclis') renderMeclisOverview(view.plaka);
+    else selectProvince(view.plaka);
   });
 
   // ---------------- view toggle ----------------

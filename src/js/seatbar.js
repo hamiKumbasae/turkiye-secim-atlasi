@@ -33,7 +33,7 @@
       if(n<=0) continue;
       const item = document.createElement('div'); item.className='legend-item';
       item.innerHTML = '<span class="swatch" style="background:'+partyColor(party)+'"></span>'+
-        '<span class="n">'+n+'</span><b>'+(PARTY[party]?PARTY[party].short:party)+'</b>';
+        '<span class="n">'+n+'</span><b>'+escapeHtml(partyShort(party))+'</b>';
       legend.appendChild(item);
     }
   }
@@ -82,8 +82,7 @@
     // Bu toplam sadece DATA.iller'den (yurt ici) geliyor - yurtdisi secmeni
     // olan secimlerde "Ulusal" baslik yaniltici olur (bkz. renderNationalSummary
     // ayni gerekce).
-    const hasYurtdisi = !!(DATA.yurtdisi && DATA.yurtdisi.oy && Object.keys(DATA.yurtdisi.oy).length);
-    $('#seatbarTitle').textContent = hasYurtdisi ? 'Yurt İçi Oy Dağılımı' : 'Ulusal Oy Dağılımı';
+    $('#seatbarTitle').textContent = hasYurtdisiData() ? 'Yurt İçi Oy Dağılımı' : 'Ulusal Oy Dağılımı';
     $('#majoritySub').textContent = 'Kazanmak için geçerli oyların yarısından fazlası gerekir';
     for(const cand of MAJOR){
       const n = totals[cand] || 0;
@@ -106,7 +105,7 @@
       const pct = grand ? n/grand*100 : 0;
       const item = document.createElement('div'); item.className='legend-item';
       item.innerHTML = '<span class="swatch" style="background:'+partyColor(cand)+'"></span>'+
-        '<span class="n">%'+pct.toFixed(2)+'</span><b>'+(PARTY[cand]?PARTY[cand].short:cand)+'</b>';
+        '<span class="n">%'+pct.toFixed(2)+'</span><b>'+escapeHtml(partyShort(cand))+'</b>';
       legend.appendChild(item);
     }
   }
@@ -137,7 +136,7 @@
       if(n<=0) continue;
       const item = document.createElement('div'); item.className='legend-item';
       item.innerHTML = '<span class="swatch" style="background:'+partyColor(party)+'"></span>'+
-        '<span class="n">'+n+'</span><b>'+(PARTY[party]?PARTY[party].short:party)+'</b>';
+        '<span class="n">'+n+'</span><b>'+escapeHtml(partyShort(party))+'</b>';
       legend.appendChild(item);
     }
   }
@@ -172,7 +171,7 @@
       if(n<=0) continue;
       const item = document.createElement('div'); item.className='legend-item';
       item.innerHTML = '<span class="swatch" style="background:'+partyColor(party)+'"></span>'+
-        '<span class="n">'+n+'</span><b>'+(PARTY[party]?PARTY[party].short:party)+'</b>';
+        '<span class="n">'+n+'</span><b>'+escapeHtml(partyShort(party))+'</b>';
       legend.appendChild(item);
     }
   }
@@ -198,7 +197,7 @@
     for(const [name, info] of entries){
       const item = document.createElement('div'); item.className='legend-item';
       item.innerHTML = '<span class="swatch" style="background:'+partyColor(name)+'"></span>'+
-        '<span class="n">%'+info.oran.toFixed(2)+'</span><b>'+(PARTY[name]?PARTY[name].short:name)+'</b>';
+        '<span class="n">%'+info.oran.toFixed(2)+'</span><b>'+escapeHtml(partyShort(name))+'</b>';
       legend.appendChild(item);
     }
   }

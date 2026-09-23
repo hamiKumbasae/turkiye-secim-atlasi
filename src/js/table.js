@@ -4,12 +4,11 @@
   $('#tableSearch').addEventListener('input', e=>{ tableFilter = e.target.value; renderTable(); });
   function renderTableHead(){
     const headRow = $('#ilTableHeadRow');
-    const oranModeHead = DATA.tur === 'referandum' || DATA.tur === 'yerel' || DATA.tur === 'cumhurbaskanligi' || YEARS_NO_VEKIL.has(currentYear);
-    const cols = oranModeHead
-      ? [['ad','İl'], ...MAJOR.map(m=>[m, (PARTY[m]?PARTY[m].short:m)+' %']), ['katilim','Katılım %'], ['secmen','Seçmen']]
-      : [['ad','İl'], ['toplamVekil','Toplam Vekil'], ...MAJOR.map(m=>[m, PARTY[m]?PARTY[m].short:m]),
+    const cols = isOranMode()
+      ? [['ad','İl'], ...MAJOR.map(m=>[m, partyShort(m)+' %']), ['katilim','Katılım %'], ['secmen','Seçmen']]
+      : [['ad','İl'], ['toplamVekil','Toplam Vekil'], ...MAJOR.map(m=>[m, partyShort(m)]),
          ['katilim','Katılım %'], ['secmen','Seçmen']];
-    headRow.innerHTML = cols.map(([key,label])=>'<th data-key="'+key+'">'+label+'</th>').join('');
+    headRow.innerHTML = cols.map(([key,label])=>'<th data-key="'+key+'">'+escapeHtml(label)+'</th>').join('');
     $$('#ilTable th').forEach(th=>{
       th.addEventListener('click', ()=>{
         const key = th.dataset.key;
@@ -19,7 +18,7 @@
     });
   }
   function renderTable(){
-    const oranMode = DATA.tur === 'referandum' || DATA.tur === 'yerel' || DATA.tur === 'cumhurbaskanligi' || YEARS_NO_VEKIL.has(currentYear);
+    const oranMode = isOranMode();
     const defaultSort = oranMode ? MAJOR[0] : 'toplamVekil';
     if(!MAJOR.includes(sortKey) && !['ad','toplamVekil','katilim','secmen'].includes(sortKey)){
       sortKey = defaultSort; sortDir = -1;
@@ -41,7 +40,7 @@
       const tr = document.createElement('tr');
       // Parti yuzde hucrelerine, gercek oy sayisini da (hover ile) her zaman
       // erisilebilir tutmak icin title niteligi ekleniyor.
-      const adCell = '<span class="table-winner-dot" style="background:'+(p.kazanan?partyColor(p.kazanan):'var(--map-empty)')+'"></span>'+p.ad;
+      const adCell = '<span class="table-winner-dot" style="background:'+(p.kazanan?partyColor(p.kazanan):'var(--map-empty)')+'"></span>'+escapeHtml(p.ad);
       const cells = oranMode
         ? [[adCell,null], ...MAJOR.map(m=>{
             const r = p.oy[m]; const pct = resultPercent(r);
@@ -51,7 +50,7 @@
             const r = p.oy[m]; const pct = resultPercent(r);
             return [p.vekil[m]||'—', r ? resultQuantity(r)+(pct!=null?' · %'+pct.toFixed(2):'') : null];
           }), [p.katilim!=null?p.katilim.toFixed(2):'—', null], [fmt(p.secmen), null]];
-      tr.innerHTML = cells.map(([c,title],i)=>'<td'+(i===0?'':' class="num"')+(title?' title="'+title+'"':'')+'>'+c+'</td>').join('');
+      tr.innerHTML = cells.map(([c,title],i)=>'<td'+(i===0?'':' class="num"')+(title?' title="'+escapeHtml(title)+'"':'')+'>'+c+'</td>').join('');
       tr.style.cursor='pointer';
       tr.addEventListener('click', ()=>{ $('#btnMapView').click(); goToProvince(p.plaka); });
       body.appendChild(tr);
