@@ -1,5 +1,7 @@
 # Türkiye Seçim Atlası
 
+**Canlı site: https://hamikumbasae.github.io/turkiye-secim-atlasi/**
+
 1950-2024 arası tüm genel seçim, yerel seçim, referandum ve cumhurbaşkanlığı
 seçimi sonuçlarını gösteren interaktif harita — 15 seçimde mahalle/muhtarlık
 düzeyine kadar iniyor.
