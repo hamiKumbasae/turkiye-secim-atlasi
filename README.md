@@ -72,3 +72,7 @@ akışı için o deponun README'sine bakın.
 Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir.
 Resmî YSK yayını değildir. Kaynak ayrıntıları ve metodoloji için sitedeki
 "Kaynaklar" panelini kullanın.
+
+## Lisans
+
+MIT — bkz. [LICENSE](LICENSE).
