@@ -53,6 +53,8 @@
     return BUNDLE.secimler[year];
   }
   function loadMahalleVotesForYear(year){
+    // Mahalle verisi olmayan yillarda (ornegin 1968 yerel) istek hic atilmaz.
+    if(!(year in MAHALLE_COVERAGE)) return Promise.resolve({});
     return fetchJSON("data/mahalle_votes/"+year+".json", {});
   }
   const geoFeatureById = {};

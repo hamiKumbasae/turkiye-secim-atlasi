@@ -6,6 +6,7 @@
     'YSK Resmî Veri': 'YSK Resmî',
     'YSK Resmî Veri (İl)': 'YSK Resmî',
     'YSK (İl) + İkincil (İlçe)': 'YSK + İkincil',
+    'YSK (İl) + TÜİK (İlçe)': 'YSK + TÜİK',
     'YSK + İkincil Kaynak': 'YSK + İkincil',
     'İkincil Kaynak': 'İkincil Kaynak',
   };
@@ -13,6 +14,8 @@
   function sourceInfo(){
     if(currentYear==='2014cb' || currentYear==='2007referandum')
       return {cat:'full', badge:'YSK Resmî Veri'};
+    if(YEARS_IL_YSK_ILCE_TUIK.has(currentYear) || YEARS_REF_IL_YSK_ILCE_TUIK.has(currentYear))
+      return {cat:'full', badge:'YSK (İl) + TÜİK (İlçe)'};
     if(YEARS_YSK_OFFICIAL_IL.has(currentYear))
       return {cat:'full', badge:'YSK Resmî Veri (İl)'};
     if(YEARS_IL_YSK_ILCE_GITHUB.has(currentYear) || YEARS_YEREL_IL_YSK_ILCE_WIKI.has(currentYear) || currentYear==='2009yerel' || currentYear==='2004yerel')
