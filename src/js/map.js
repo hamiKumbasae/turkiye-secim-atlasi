@@ -209,6 +209,31 @@
     return hidden;
   }
 
+  // Veri olmayan ilce o secimde henuz ayri ilce degilse taranir ve nedeni yazilir.
+  function gecisNotu(geomId){
+    const secim = ((HARITA_NOTLARI && HARITA_NOTLARI.secimler) || {})[currentYear];
+    if(!secim || !(geomId in secim)) return null;
+    const n = HARITA_NOTLARI.ilceler[geomId];
+    return n ? Object.assign({girmedi: secim[geomId] === 1}, n) : null;
+  }
+  function gecisNotuHtml(n){
+    const t = n.tarih ? n.tarih.split('-').reverse().join('.') : '';
+    const kanun = n.kanun ? (/^KHK/.test(n.kanun) ? n.kanun : n.kanun + ' sayılı Kanun') : 'kanun';
+    const kaynak = n.kaynaklar || [];
+    const liste = kaynak.map((k,i)=>k[0] + ' (' + k[1] + (i===0 ? ' birim' : '') + ')');
+    const listeMetni = liste.length > 1 ? liste.slice(0,-1).join(', ') + ' ve ' + liste[liste.length-1] : (liste[0] || '');
+    let neden;
+    if(n.durum === 'kanun_cok_kaynak') neden = 'Alanı bu dönemde ' + listeMetni + ' ilçeleri arasında bölünmüştü; tek bir ilçenin rengine boyanamıyor.';
+    else if(n.durum === 'kanun_tek_kaynak' && kaynak.length) neden = 'Bu dönemde ' + kaynak[0][0] + ' ilçesinin parçasıydı; bu seçimin verisinde ' + kaynak[0][0] + ' için ayrı ilçe satırı yok.';
+    else if(n.durum === 'merkez_ilce') neden = 'Eski Merkez ilçenin devamı; bu seçimin verisinde Merkez ilçe satırı yok.';
+    else neden = 'Hangi ilçeden ayrıldığı kaynaklarda henüz belirlenemedi.';
+    const kurulus = n.girmedi
+      ? kanun + ' ile ' + t + ' tarihinde kuruldu ama bu seçime ayrı ilçe olarak girmedi.'
+      : 'Bu seçimde henüz ayrı ilçe değildi (' + kanun + ', ' + t + ').';
+    return '<b>' + escapeHtml(n.ad) + '</b><div class="row"><span>' + escapeHtml(kurulus) + '</span></div><div class="row"><span>' + escapeHtml(neden) + '</span></div>';
+  }
+  function bosDolgu(geomId){ return gecisNotu(geomId) ? 'url(#hatchGecis)' : 'var(--map-empty)'; }
+
   function renderProvinceMap(plaka){
     view = {level:'province', plaka};
     const allDataFeats = districtFeaturesForProvince(plaka);
@@ -230,6 +255,12 @@
     const project = computeProjection(allFeats.length?allFeats:fallbackFeats, PAD);
     svg.innerHTML = '';
     pathByPlaka = {}; pathByGeomId = {};
+    if(noDataFeats.some(f=>gecisNotu(f.properties.id))){
+      const defs = document.createElementNS(NS,'defs');
+      defs.innerHTML = '<pattern id="hatchGecis" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+        + '<rect width="6" height="6"/><line x1="0" y1="0" x2="0" y2="6"/></pattern>';
+      svg.appendChild(defs);
+    }
     if(!dataFeats.length){
       // Bu yil icin ilce verisi hic yok - il sinirini tek parca olarak,
       // ilin kendi kazanan rengiyle goster.
@@ -250,10 +281,12 @@
       const geomId = f.properties.id;
       const el = document.createElementNS(NS,'path');
       el.setAttribute('d', geomToPath(project, f.geometry));
-      el.setAttribute('class','geo-path geo-path-nodata');
-      el.setAttribute('fill','var(--map-empty)');
+      const not = gecisNotu(geomId);
+      el.setAttribute('class', not ? 'geo-path geo-path-nodata geo-path-gecis' : 'geo-path geo-path-nodata');
+      el.setAttribute('fill', not ? 'url(#hatchGecis)' : 'var(--map-empty)');
       el.dataset.geomId = geomId;
       el.addEventListener('mousemove', e=>{
+        if(not){ tip.innerHTML = gecisNotuHtml(not); positionTip(e); return; }
         const d = districtByGeomId[geomId];
         tip.innerHTML = '<b>'+escapeHtml(d?d.ad:'')+'</b><div class="row"><span>Bu dönem için veri yok</span></div>';
         positionTip(e);
@@ -379,7 +412,7 @@
       // districts with geometry but no matched vote row -> neutral fill
       if(view.level==='province'){
         for(const [gid, el] of Object.entries(pathByGeomId)){
-          if(!districtByGeomId[gid]) el.setAttribute('fill','var(--map-empty)');
+          if(!districtByGeomId[gid]) el.setAttribute('fill', bosDolgu(gid));
         }
       }
       renderWinnerLegend(entities);
@@ -404,7 +437,7 @@
     }
     if(view.level==='province'){
       for(const [gid, el] of Object.entries(pathByGeomId)){
-        if(!districtByGeomId[gid]) el.setAttribute('fill','var(--map-empty)');
+        if(!districtByGeomId[gid]) el.setAttribute('fill', bosDolgu(gid));
       }
     }
   }

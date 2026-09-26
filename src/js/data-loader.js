@@ -25,13 +25,13 @@
     return FETCH_CACHE[path];
   }
 
-  let BUNDLE, GEO, GEO_ILCE, GEO_ILCE_HIST, MAHALLE_GEO, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS;
+  let BUNDLE, GEO, GEO_ILCE, GEO_ILCE_HIST, MAHALLE_GEO, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS, HARITA_NOTLARI;
   try{
     // Paylasimli/nispeten kucuk dosyalar (geo, mahalle poligonlari, parti
     // renkleri) burada eager yukleniyor. Secimler ve mahalle oy verisi ise
     // lazy - her yil sadece secildiginde fetchElection()/loadMahalleVotesForYear()
     // ile indirilir (bkz. app.js: loadYear).
-    const [partiler, il, ilce, ilceHist, mahalleGeo, meclis, mahalleCoverage, districtSplits] = await Promise.all([
+    const [partiler, il, ilce, ilceHist, mahalleGeo, meclis, mahalleCoverage, districtSplits, haritaNotlari] = await Promise.all([
       fetchJSON("data/parties.json"),
       fetchJSON("geo/il_sinirlari.geojson"),
       fetchJSON("geo/ilce_sinirlari.geojson"),
@@ -40,10 +40,11 @@
       fetchJSON("geo/meclis_2024.json", {}),
       fetchJSON("geo/mahalle_coverage.json", {}),
       fetchJSON("geo/district_splits.json", {}),
+      fetchJSON("geo/harita_notlari.json", {}),
     ]);
     BUNDLE = {partiler, secimler: {}};
     GEO = il; GEO_ILCE = ilce; GEO_ILCE_HIST = ilceHist; MAHALLE_GEO = mahalleGeo;
-    MECLIS_2024 = meclis; MAHALLE_COVERAGE = mahalleCoverage; DISTRICT_SPLITS = districtSplits;
+    MECLIS_2024 = meclis; MAHALLE_COVERAGE = mahalleCoverage; DISTRICT_SPLITS = districtSplits; HARITA_NOTLARI = haritaNotlari;
   }catch(e){
     document.body.innerHTML = '<div class="wrap"><p>Veri yüklenemedi: '+e+'</p></div>';
     return;
