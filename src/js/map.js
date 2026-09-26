@@ -223,6 +223,20 @@
     const liste = kaynak.map((k,i)=>k[0] + ' (' + k[1] + (i===0 ? ' birim' : '') + ')');
     const listeMetni = liste.length > 1 ? liste.slice(0,-1).join(', ') + ' ve ' + liste[liste.length-1] : (liste[0] || '');
     let neden;
+    // mahalle duzeyinde eski ilcelere paylastirilamayan kisim (BELIRSIZ-*)
+    if(n.durum === 'belirsiz_parca'){
+      const m = (n.mahalleler || []).length ? ' (' + n.mahalleler.join(', ') + ' mahallesi ve mahalle poligonu olmayan göl/orman alanı)' : ' (mahalle poligonu olmayan göl/orman alanı)';
+      return '<b>' + escapeHtml(n.ad) + ' — paylaştırılamayan kısım</b><div class="row"><span>' + escapeHtml('Bugünkü ' + n.ad + ' ' + t + '\'te ' + kanun + ' ile ' + listeMetni
+        + ' ilçelerinden kuruldu. Alanın büyük kısmı mahalle düzeyinde eski ilçelerine dağıtıldı; bu kısım' + m
+        + ' kaynaklarla hangi ilçeye ait olduğu belirlenemediği için taralı.') + '</span></div>'
+        + ((n.donemdeIlceDegistiren || []).length ? '<div class="row"><span>' + escapeHtml('Nüfus sayımlarına göre bu dönemde ilçe değiştiren birim: '
+          + n.donemdeIlceDegistiren.map(x=>x.replace(' MAH.', '')).join(', ') + '; iki sayım arasındaki seçimlerde hangi ilçede olduğu bilinmiyor.') + '</span></div>' : '');
+    }
+    // eski ilcesi o secimde ayri satir olmayan parca (PARCA-*)
+    if(n.durum === 'hedefsiz_parca'){
+      return '<b>' + escapeHtml(n.ad + ' — ' + n.eskiIlce + ' parçası') + '</b><div class="row"><span>' + escapeHtml('Bugünkü ' + n.ad + '\'in bu kısmı '
+        + kanun + ' (' + t + ') ile ' + n.eskiIlce + '\'den geldi; ' + n.eskiIlce + ' bu seçimde ayrı ilçe değildi ve o tarihte hangi ilçeye bağlı olduğu kaynaklarda yok.') + '</span></div>';
+    }
     if(n.durum === 'kanun_cok_kaynak') neden = 'Alanı bu dönemde ' + listeMetni + ' ilçeleri arasında bölünmüştü; tek bir ilçenin rengine boyanamıyor.';
     else if(n.durum === 'kanun_tek_kaynak' && kaynak.length) neden = 'Bu dönemde ' + kaynak[0][0] + ' ilçesinin parçasıydı; bu seçimin verisinde ' + kaynak[0][0] + ' için ayrı ilçe satırı yok.';
     else if(n.durum === 'merkez_ilce') neden = 'Eski Merkez ilçenin devamı; bu seçimin verisinde Merkez ilçe satırı yok.';
@@ -250,6 +264,14 @@
     // "veri yok" diye gostermek de yaniltici olur.
     const modernFeats = dataFeats.length ? GEO_ILCE.features.filter(f=>f.properties.plaka===plaka) : [];
     const noDataFeats = modernFeats.filter(f=>!dataGeomIds.has(f.properties.id) && !hiddenByMerge.has(f.properties.id));
+    // mahalle duzeyinde paylastirilamayan parcalar (BELIRSIZ-*/PARCA-*): bu secimde notluysa
+    if(dataFeats.length){
+      const secimNot = ((HARITA_NOTLARI && HARITA_NOTLARI.secimler) || {})[currentYear] || {};
+      for(const id of Object.keys(secimNot)){
+        const f = (id.startsWith('BELIRSIZ-') || id.startsWith('PARCA-')) && geoFeatureById[id];
+        if(f && f.properties.plaka === plaka) noDataFeats.push(f);
+      }
+    }
     const fallbackFeats = GEO.features.filter(f=>f.properties.plaka===plaka);
     const allFeats = dataFeats.length ? [...dataFeats, ...noDataFeats] : fallbackFeats;
     const project = computeProjection(allFeats.length?allFeats:fallbackFeats, PAD);
