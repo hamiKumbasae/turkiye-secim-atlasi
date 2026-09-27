@@ -431,7 +431,7 @@
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 27.09.2026 · veri sürümü befad1cabc</div>
+    <div class="footer-disclaimer">Son güncelleme: 27.09.2026 · veri sürümü d5d54209bf</div>
   </footer>
 </div>
 
@@ -463,7 +463,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = 'befad1cabc';
+  const VERI_SURUMU = 'd5d54209bf';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -1179,21 +1179,19 @@
     return n ? Object.assign({girmedi: secim[geomId] === 1}, n) : null;
   }
   function gecisNotuHtml(n){
-    const t = n.tarih ? n.tarih.split('-').reverse().join('.') : '';
-    const kanun = n.kanun ? (/^KHK/.test(n.kanun) ? n.kanun : n.kanun + ' sayılı Kanun') : 'kanun';
-    const kaynak = n.kaynaklar || [];
-    const liste = kaynak.map((k,i)=>k[0] + ' (' + k[1] + (i===0 ? ' birim' : '') + ')');
-    const listeMetni = liste.length > 1 ? liste.slice(0,-1).join(', ') + ' ve ' + liste[liste.length-1] : (liste[0] || '');
+    // kisa: kurulus yili + kanun, tek cumlelik neden
+    const yil = n.tarih ? n.tarih.slice(0, 4) : '';
+    const kanun = n.kanun ? (/^KHK/.test(n.kanun) ? n.kanun : 'Kanun ' + n.kanun) : '';
+    const adlar = (n.kaynaklar || []).map(k => k[0]);
     let neden;
-    if(n.durum === 'kanun_cok_kaynak') neden = 'Alanı bu dönemde ' + listeMetni + ' ilçeleri arasında bölünmüştü; tek bir ilçenin rengine boyanamıyor.';
-    else if(n.durum === 'kanun_tek_kaynak' && kaynak.length) neden = 'Bu dönemde ' + kaynak[0][0] + ' ilçesinin parçasıydı; bu seçimin verisinde ' + kaynak[0][0] + ' için ayrı ilçe satırı yok.';
-    else if(n.durum === 'merkez_ilce') neden = 'Eski Merkez ilçenin devamı; bu seçimin verisinde Merkez ilçe satırı yok.';
-    else neden = 'Hangi ilçeden ayrıldığı kaynaklarda henüz belirlenemedi.';
-    const kurulus = n.girmedi
-      ? kanun + ' ile ' + t + ' tarihinde kuruldu ama bu seçime ayrı ilçe olarak girmedi.'
-      : 'Bu seçimde henüz ayrı ilçe değildi (' + kanun + ', ' + t + ').';
-    return '<b>' + escapeHtml(n.ad) + '</b><div class="row"><span>' + escapeHtml(kurulus) + '</span></div><div class="row"><span>' + escapeHtml(neden) + '</span></div>';
+    if(n.durum === 'kanun_cok_kaynak' && adlar.length) neden = 'Ayrıldığı ilçeler: ' + adlar.join(', ');
+    else if(n.durum === 'kanun_tek_kaynak' && adlar.length) neden = 'O dönem bağlı olduğu ilçe: ' + adlar[0];
+    else if(n.durum === 'merkez_ilce') neden = 'Eski Merkez ilçenin devamı';
+    else neden = 'Hangi ilçeden ayrıldığı bilinmiyor';
+    const kurulus = 'Kuruluş: ' + yil + (kanun ? ' (' + kanun + ')' : '') + (n.girmedi ? ' · bu seçime ayrı girmedi' : ' · bu seçimde henüz yoktu');
+    return '<b>' + escapeHtml(n.ad) + '</b>' + '<div class="row"><span>' + escapeHtml(kurulus) + '</span></div><div class="row"><span>' + escapeHtml(neden) + '</span></div>';
   }
+
   function bosDolgu(geomId){ return gecisNotu(geomId) ? 'url(#hatchGecis)' : 'var(--map-empty)'; }
 
   function renderProvinceMap(plaka){
@@ -1451,9 +1449,9 @@
     if(!b) return '';
     let h = '<div class="row tip-not"><span>' + escapeHtml('Bugünkü sınırlarla: ' + b.ilceler.join(', ')) + '</span></div>';
     for(const c of (b.cogunluk || [])){
-      const d = (c.digerleri || []).map(x => x[0] + ' (' + x[1] + ' birim)').join(', ');
-      if(d) h += '<div class="row tip-not"><span>' + escapeHtml(c.ad + ' birimlerinin %' + Math.round(c.pay * 100) + '\'i '
-        + c.ana + '\'den, ' + d + ' başka ilçeden geldi; harita ana kaynağa göre çizildi.') + '</span></div>';
+      // kisa, eksiz: 'Konyaaltı: %92 Merkez, Kemer 1 birim'
+      const d = (c.digerleri || []).map(x => x[0] + ' ' + x[1] + ' birim').join(', ');
+      if(d) h += '<div class="row tip-not"><span>' + escapeHtml(c.ad + ': %' + Math.round(c.pay * 100) + ' ' + c.ana + ', ' + d) + '</span></div>';
     }
     return h;
   }
