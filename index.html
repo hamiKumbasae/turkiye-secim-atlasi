@@ -443,7 +443,7 @@
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 27.09.2026 · veri sürümü 49b63ec0c0</div>
+    <div class="footer-disclaimer">Son güncelleme: 27.09.2026 · veri sürümü ea71372f30</div>
   </footer>
 </div>
 
@@ -475,7 +475,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = '49b63ec0c0';
+  const VERI_SURUMU = 'ea71372f30';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -1500,6 +1500,7 @@
         : (info.kind==='il' ? 'İl merkezi belediye başkanlığı (büyükşehirde büyükşehir)' : null);
       if(alt && info.kind!=='mahalle') html += '<div class="row tip-not"><span>' + alt + '</span></div>';
     }
+    if(info.kind==='ilce' && obj.ilceGeneliSonuc && !DATA.oylama) html += '<div class="row tip-not"><span>Sonuç: ' + obj.ilceGeneliSonuc + ' (ilçe belediyesi satırı doğrulanamadı)</span></div>';
     if(info.kind==='ilce' && obj.ilMerkeziBelediyesi) html += '<div class="row tip-not"><span>' + (obj.buyuksehirSonucu ? 'Büyükşehir' : 'İl merkezi') + ' belediye başkanlığı sonucu</span></div>';
     if(info.kind==='ilce') html += birlesimNotuHtml(info.geomId);
     tip.innerHTML = html;
