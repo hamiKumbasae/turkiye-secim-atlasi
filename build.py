@@ -9,6 +9,8 @@ eski projenin ~20MB'lik tek-dosyasindan cok daha kucuk.
 Kullanim:
   python3 build.py
 """
+import datetime
+import hashlib
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -38,9 +40,18 @@ def main():
 
     html = html.replace(CSS_PLACEHOLDER, css)
     html = html.replace(JS_PLACEHOLDER, js)
+    # veri surumu: data/ ve geo/ iceriginin ozeti (her yayinda degisir -> tarayici onbellegi atlanir)
+    h = hashlib.sha256()
+    for f in sorted(list((ROOT / "data").rglob("*")) + list((ROOT / "geo").rglob("*"))):
+        if f.is_file():
+            h.update(str(f.relative_to(ROOT)).encode())
+            h.update(hashlib.sha256(f.read_bytes()).digest())
+    h.update(js.encode())
+    surum = h.hexdigest()[:10]
+    html = html.replace("__VERI_SURUMU__", surum).replace("__YAYIN_TARIHI__", datetime.date.today().strftime("%d.%m.%Y"))
 
     OUT.write_text(html, encoding="utf-8")
-    print(f"yazıldı: {OUT} ({OUT.stat().st_size / 1024:.1f} KB)")
+    print(f"yazıldı: {OUT} ({OUT.stat().st_size / 1024:.1f} KB), veri sürümü {surum}")
 
 
 if __name__ == "__main__":

@@ -10,11 +10,15 @@
   // Veri ayri statik JSON dosyalari olarak fetch() ile okunuyor. Yollar
   // sayfaya gore (relative, basinda / yok) - boylece hem yerelde hem GitHub
   // Pages'in bir alt dizin (repo-adi) altinda servis etmesiyle de calisir.
+  // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
+  // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
+  // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
+  const VERI_SURUMU = '__VERI_SURUMU__';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
       FETCH_CACHE[path] = (async () => {
-        const res = await fetch(path);
+        const res = await fetch(path + '?v=' + VERI_SURUMU);
         if(!res.ok){
           if(res.status === 404 && fallback !== undefined) return fallback;
           throw new Error('Veri alınamadı: '+path+' ('+res.status+')');
