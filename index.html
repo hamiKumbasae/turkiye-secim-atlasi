@@ -443,7 +443,7 @@
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 27.09.2026 · veri sürümü 4aa5e91f56</div>
+    <div class="footer-disclaimer">Son güncelleme: 27.09.2026 · veri sürümü 49b63ec0c0</div>
   </footer>
 </div>
 
@@ -475,7 +475,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = '4aa5e91f56';
+  const VERI_SURUMU = '49b63ec0c0';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -584,8 +584,8 @@
   // ---------------- yerel secim: oylama turu (baskan / il genel meclisi / belediye meclisi) ----------------
   // Meclis kayitlari scripts/pipelines/meclis_harita/build_meclis_harita.py ile uretilir; ayni
   // yilin baskanlik kaydinin ilce iskeletini kullanir (harita cografyasi ayni kalir).
-  const OYLAMA_YILLARI = new Set(['2009yerel','2014yerel','2019yerel','2024yerel']);
-  const OYLAMA_KAYNAKTA_VAR = new Set(['1984yerel','1989yerel','1994yerel','1999yerel','2004yerel']);
+  const OYLAMA_YILLARI = new Set(['2009yerel','2014yerel','2019yerel','2024yerel','2004yerel','1999yerel','1994yerel','1989yerel','1984yerel']);
+  const OYLAMA_KAYNAKTA_VAR = new Set([]);
   const OYLAMA_ACIKLAMA = {
     igm: 'YSK Açık Veri Portalı — il genel meclisi üyeliği oyları (sandık düzeyinden toplandı). İlçe sonucu ilçenin tamamıdır (beldeler dahil). 2014\'ten beri büyükşehirlerde il genel meclisi seçilmez (6360 sayılı Kanun).',
     bm: 'YSK Açık Veri Portalı — belediye meclisi üyeliği oyları (sandık düzeyinden toplandı). İlçe sonucu yalnız ilçe belediyesinin meclisidir, belde meclisleri hariç. İl sonucu ildeki bütün belediye meclislerinin toplamıdır.',
@@ -904,7 +904,7 @@
   };
 
   function sourceInfo(){
-    if(DATA.oylama) return {cat:'full', badge:'YSK Resmî Veri', detail: OYLAMA_ACIKLAMA[DATA.oylama]};
+    if(DATA.oylama) return {cat:'full', badge: DATA.rozet || 'YSK Resmî Veri', detail: DATA.aciklama || OYLAMA_ACIKLAMA[DATA.oylama]};
     if(currentYear==='2014cb' || currentYear==='2007referandum')
       return {cat:'full', badge:'YSK Resmî Veri'};
     if(YEARS_IL_YSK_ILCE_TUIK.has(currentYear) || YEARS_REF_IL_YSK_ILCE_TUIK.has(currentYear))
@@ -1297,8 +1297,12 @@
       el.dataset.geomId = geomId;
       el.addEventListener('mousemove', e=>{
         if(not){ tip.innerHTML = gecisNotuHtml(not); positionTip(e); return; }
-        const d = districtByGeomId[geomId];
-        tip.innerHTML = '<b>'+escapeHtml(d?d.ad:'')+'</b><div class="row"><span>Bu dönem için veri yok</span></div>';
+        let d = districtByGeomId[geomId];
+        if(!d){ // tarihsel birlesim poligonunun parcasi: birlesimin satirindaki not
+          const e = (DISTRICT_SPLITS[String(plaka)] || []).find(x => x.hideIds.includes(geomId) && districtByGeomId[x.syntheticId]);
+          if(e) d = districtByGeomId[e.syntheticId];
+        }
+        tip.innerHTML = '<b>'+escapeHtml(d?d.ad:'')+'</b><div class="row"><span>'+((d && d.not) || 'Bu dönem için veri yok')+'</span></div>';
         positionTip(e);
       });
       el.addEventListener('mouseleave', hideTooltip);
