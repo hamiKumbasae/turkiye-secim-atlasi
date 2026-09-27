@@ -12,6 +12,7 @@
   };
 
   function sourceInfo(){
+    if(DATA.oylama) return {cat:'full', badge:'YSK Resmî Veri', detail: OYLAMA_ACIKLAMA[DATA.oylama]};
     if(currentYear==='2014cb' || currentYear==='2007referandum')
       return {cat:'full', badge:'YSK Resmî Veri'};
     if(YEARS_IL_YSK_ILCE_TUIK.has(currentYear) || YEARS_REF_IL_YSK_ILCE_TUIK.has(currentYear))
@@ -34,7 +35,7 @@
     // hesaplayip gomdugu MAHALLE_COVERAGE) ayrica kontrol ediyoruz - yoksa
     // "Mahalleye kadar" rozeti, o yil hic mahalle oyu olmasa bile sadece
     // geometri var diye yanlislikla gorunebilirdi.
-    const mahalleDistricts = MAHALLE_COVERAGE[currentYear] || 0;
+    const mahalleDistricts = DATA.oylama ? 0 : (MAHALLE_COVERAGE[currentYear] || 0);
     return {ilceTotal, ilceWithData, ilceOn: ilceWithData>0, mahalleDistricts, mahalleOn: mahalleDistricts>0};
   }
 
@@ -44,7 +45,7 @@
     const isCB = DATA.tur === 'cumhurbaskanligi';
     const typeLabel = isRef ? 'Referandum' : (isYerel ? 'Yerel Seçim' : (isCB ? 'Cumhurbaşkanlığı Seçimi' : 'Milletvekili Genel Seçimi'));
     $('#eyebrowText').textContent = (isRef ? 'REFERANDUM' : (isYerel ? 'YEREL SEÇİM' : (isCB ? 'CUMHURBAŞKANLIĞI' : 'GENEL SEÇİM')));
-    $('#pageTitle').textContent = DATA.ad+' '+typeLabel;
+    $('#pageTitle').textContent = DATA.ad+' '+typeLabel+(DATA.oylamaAdi ? ' · '+DATA.oylamaAdi : '');
 
     const src = sourceInfo();
     const dot = $('#sourceBadgeDot');
@@ -75,7 +76,7 @@
       [hasYurtdisi ? 'Yurt İçi Geçerli Oy' : 'Geçerli Oy', gecerli ? fmt(gecerli) : '—'],
     ];
     if(DATA.tur === 'genel' && DATA.toplamSandalye!=null) items.push(['Sandalye', fmt(DATA.toplamSandalye)]);
-    items.push(['İl', iller.length]);
+    items.push(['İl', iller.filter(i => i.kazanan || !i.not).length]);
 
     $('#nationalSummary').innerHTML = items.map(([l,v])=>
       '<div class="ns-item"><div class="l">'+l+'</div><div class="v num">'+v+'</div></div>'

@@ -272,6 +272,12 @@
   .dr-row{display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-bottom:1px solid var(--line-soft); font-size:12.5px;}
   .dr-badge{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; color:var(--ink-2);}
   .dr-badge .dot{width:7px; height:7px; border-radius:50%;}
+  .oylama-tabs{display:flex; flex-wrap:wrap; gap:6px; margin:-8px 0 20px;}
+  .oylama-tabs[hidden]{display:none;}
+  .oylama-tabs button{font:inherit; font-family:'Inter',sans-serif; font-size:12px; font-weight:600; padding:5px 12px; border:1px solid var(--line); border-radius:999px; background:none; color:var(--ink-2); cursor:pointer;}
+  .oylama-tabs button:hover:not(:disabled):not(.active){color:var(--ink-1); border-color:var(--ink-3);}
+  .oylama-tabs button.active{background:var(--ink-1); border-color:var(--ink-1); color:var(--surface-1);}
+  .oylama-tabs button:disabled{opacity:.45; cursor:not-allowed;}
 
 </style>
 </head>
@@ -297,6 +303,12 @@
   </div>
 
   <div class="year-timeline" id="yearPicker"></div>
+
+  <div class="oylama-tabs" id="oylamaToggle" hidden>
+    <button data-oylama="baskan">Belediye Başkanı</button>
+    <button data-oylama="igm">İl Genel Meclisi</button>
+    <button data-oylama="bm">Belediye Meclisi</button>
+  </div>
 
   <div class="election-bar">
     <div class="election-bar-main">
@@ -431,7 +443,7 @@
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 27.09.2026 · veri sürümü 5bc644365a</div>
+    <div class="footer-disclaimer">Son güncelleme: 27.09.2026 · veri sürümü 4aa5e91f56</div>
   </footer>
 </div>
 
@@ -463,7 +475,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = '5bc644365a';
+  const VERI_SURUMU = '4aa5e91f56';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -535,6 +547,10 @@
     }
     return feats;
   }
+  // yerel secim meclis kayitlari (il genel meclisi / belediye meclisi): bkz. election-config.js
+  function loadOylama(year, kisa){
+    return fetchJSON("data/meclis_harita/"+year+"_"+kisa+".json", null);
+  }
 
   const PARTY = BUNDLE.partiler;
   const YEAR_ORDER = ['2023','2018','2015Kasim','2015Haziran','2011','2007','2002','1999','1995','1991','1987','1983','1977','1973','1969','1965','1961','1957','1954','1950'];
@@ -565,6 +581,39 @@
   const CB_YEAR_ORDER = ['2023cb2tur','2023cb1tur','2018cb','2014cb'];
   const CB_YEAR_LABEL = {'2023cb2tur':'2023 (2.Tur)','2023cb1tur':'2023 (1.Tur)','2018cb':'2018','2014cb':'2014'};
 
+  // ---------------- yerel secim: oylama turu (baskan / il genel meclisi / belediye meclisi) ----------------
+  // Meclis kayitlari scripts/pipelines/meclis_harita/build_meclis_harita.py ile uretilir; ayni
+  // yilin baskanlik kaydinin ilce iskeletini kullanir (harita cografyasi ayni kalir).
+  const OYLAMA_YILLARI = new Set(['2009yerel','2014yerel','2019yerel','2024yerel']);
+  const OYLAMA_KAYNAKTA_VAR = new Set(['1984yerel','1989yerel','1994yerel','1999yerel','2004yerel']);
+  const OYLAMA_ACIKLAMA = {
+    igm: 'YSK Açık Veri Portalı — il genel meclisi üyeliği oyları (sandık düzeyinden toplandı). İlçe sonucu ilçenin tamamıdır (beldeler dahil). 2014\'ten beri büyükşehirlerde il genel meclisi seçilmez (6360 sayılı Kanun).',
+    bm: 'YSK Açık Veri Portalı — belediye meclisi üyeliği oyları (sandık düzeyinden toplandı). İlçe sonucu yalnız ilçe belediyesinin meclisidir, belde meclisleri hariç. İl sonucu ildeki bütün belediye meclislerinin toplamıdır.',
+  };
+  async function oylamaKaydi(year, baskanKaydi){
+    if(baskanKaydi.tur !== 'yerel' || currentOylama === 'baskan') return baskanKaydi;
+    const k = OYLAMA_YILLARI.has(year) ? await loadOylama(year, currentOylama) : null;
+    if(k) return k;
+    currentOylama = 'baskan';
+    return baskanKaydi;
+  }
+  function renderOylamaToggle(){
+    const wrap = $('#oylamaToggle');
+    wrap.hidden = currentTur !== 'yerel' || DATA.contestType === 'municipal_indirect';
+    if(wrap.hidden) return;
+    const var_ = OYLAMA_YILLARI.has(currentYear);
+    for(const b of $$('#oylamaToggle button')){
+      const o = b.dataset.oylama;
+      b.classList.toggle('active', o === currentOylama);
+      b.disabled = o !== 'baskan' && !var_;
+      b.title = b.disabled ? (OYLAMA_KAYNAKTA_VAR.has(currentYear) ? 'Bu yılın meclis sonuçları haritaya henüz eklenmedi' : 'Bu seçim için meclis sonuçları kaynaklarda yok') : '';
+    }
+  }
+  $$('#oylamaToggle button').forEach(b => b.addEventListener('click', () => {
+    if(b.disabled || b.dataset.oylama === currentOylama) return;
+    currentOylama = b.dataset.oylama;
+    loadYear(currentYear);
+  }));
 
   let currentTur = 'genel'; // app.js'in acilista cagirdigi switchTur('genel') ile ayni olmali
   // cogunluk usulu genel secim yillari (il kazanani vekil sayisina gore)
@@ -577,7 +626,7 @@
     const meta = PARTY[name] || PARTY['Diğer'];
     return dark ? meta.dark : meta.light;
   }
-
+  let currentOylama = 'baskan'; // yerel secimde gosterilen oylama: baskan | igm | bm
 
   // ---------------- oy/sandalye sonuc yardimcilari ----------------
   // Bir "result" nesnesi (secim kaydindaki oy['<parti>'] girisi) iki farkli
@@ -855,6 +904,7 @@
   };
 
   function sourceInfo(){
+    if(DATA.oylama) return {cat:'full', badge:'YSK Resmî Veri', detail: OYLAMA_ACIKLAMA[DATA.oylama]};
     if(currentYear==='2014cb' || currentYear==='2007referandum')
       return {cat:'full', badge:'YSK Resmî Veri'};
     if(YEARS_IL_YSK_ILCE_TUIK.has(currentYear) || YEARS_REF_IL_YSK_ILCE_TUIK.has(currentYear))
@@ -877,7 +927,7 @@
     // hesaplayip gomdugu MAHALLE_COVERAGE) ayrica kontrol ediyoruz - yoksa
     // "Mahalleye kadar" rozeti, o yil hic mahalle oyu olmasa bile sadece
     // geometri var diye yanlislikla gorunebilirdi.
-    const mahalleDistricts = MAHALLE_COVERAGE[currentYear] || 0;
+    const mahalleDistricts = DATA.oylama ? 0 : (MAHALLE_COVERAGE[currentYear] || 0);
     return {ilceTotal, ilceWithData, ilceOn: ilceWithData>0, mahalleDistricts, mahalleOn: mahalleDistricts>0};
   }
 
@@ -887,7 +937,7 @@
     const isCB = DATA.tur === 'cumhurbaskanligi';
     const typeLabel = isRef ? 'Referandum' : (isYerel ? 'Yerel Seçim' : (isCB ? 'Cumhurbaşkanlığı Seçimi' : 'Milletvekili Genel Seçimi'));
     $('#eyebrowText').textContent = (isRef ? 'REFERANDUM' : (isYerel ? 'YEREL SEÇİM' : (isCB ? 'CUMHURBAŞKANLIĞI' : 'GENEL SEÇİM')));
-    $('#pageTitle').textContent = DATA.ad+' '+typeLabel;
+    $('#pageTitle').textContent = DATA.ad+' '+typeLabel+(DATA.oylamaAdi ? ' · '+DATA.oylamaAdi : '');
 
     const src = sourceInfo();
     const dot = $('#sourceBadgeDot');
@@ -918,7 +968,7 @@
       [hasYurtdisi ? 'Yurt İçi Geçerli Oy' : 'Geçerli Oy', gecerli ? fmt(gecerli) : '—'],
     ];
     if(DATA.tur === 'genel' && DATA.toplamSandalye!=null) items.push(['Sandalye', fmt(DATA.toplamSandalye)]);
-    items.push(['İl', iller.length]);
+    items.push(['İl', iller.filter(i => i.kazanan || !i.not).length]);
 
     $('#nationalSummary').innerHTML = items.map(([l,v])=>
       '<div class="ns-item"><div class="l">'+l+'</div><div class="v num">'+v+'</div></div>'
@@ -1143,7 +1193,7 @@
 
   async function mahalleDataForDistrict(geomId){
     const geoRows = MAHALLE_GEO[geomId];
-    if(!geoRows) return null;
+    if(!geoRows || DATA.oylama) return null; // mahalle oylari yalniz baskanlik secimi icin var
     const votesForYear = await loadMahalleVotesForYear(currentYear);
     const voteRows = votesForYear[geomId];
     if(!voteRows) return null;
@@ -1422,6 +1472,7 @@
       name = obj.ad; sandikVal = obj.sandik;
     }
     let html = '<b>'+escapeHtml(name)+'</b>';
+    if(!obj.kazanan && obj.not){ tip.innerHTML = html + '<div class="row tip-not"><span>' + obj.not + '</span></div>'; positionTip(e); return; }
     if(mode==='winner'){
       const wOy = obj.oy[obj.kazanan];
       const wSeatBased = isSeatBased(wOy);
@@ -1439,6 +1490,12 @@
       html += '<div class="row"><span>Katılım</span><span>'+(obj.katilim!=null?'%'+obj.katilim.toFixed(2):'—')+'</span></div>';
     }
     if(sandikVal!=null) html += '<div class="row"><span>Sandık</span><span>'+fmt(sandikVal)+'</span></div>';
+    if(DATA.tur==='yerel' && DATA.contestType!=='municipal_indirect'){
+      const alt = DATA.oylama==='igm' ? (info.kind==='il' ? 'İl genel meclisi · il toplamı' : 'İl genel meclisi · ilçenin tamamı')
+        : DATA.oylama==='bm' ? (info.kind==='il' ? 'Belediye meclisleri · ildeki tüm belediyeler' : 'İlçe belediyesi meclisi')
+        : (info.kind==='il' ? 'İl merkezi belediye başkanlığı (büyükşehirde büyükşehir)' : null);
+      if(alt && info.kind!=='mahalle') html += '<div class="row tip-not"><span>' + alt + '</span></div>';
+    }
     if(info.kind==='ilce' && obj.ilMerkeziBelediyesi) html += '<div class="row tip-not"><span>' + (obj.buyuksehirSonucu ? 'Büyükşehir' : 'İl merkezi') + ' belediye başkanlığı sonucu</span></div>';
     if(info.kind==='ilce') html += birlesimNotuHtml(info.geomId);
     tip.innerHTML = html;
@@ -1469,7 +1526,7 @@
   let detailView = 'baskanlik'; // 'baskanlik' | 'meclis' - sadece 2024yerel + MECLIS_PROVINCES'ta anlamli
 
   function meclisToggleApplicable(plaka){
-    return DATA.tur==='yerel' && currentYear==='2024yerel' && MECLIS_PROVINCES.has(plaka);
+    return DATA.tur==='yerel' && !DATA.oylama && currentYear==='2024yerel' && MECLIS_PROVINCES.has(plaka);
   }
 
   // Deger yoksa satiri TAMAMEN gizler ('—' yerine) - eski secimlerde art arda
@@ -1548,6 +1605,7 @@
         : 'ⓘ Bu seçimde belediye başkanı doğrudan halk tarafından seçilmiyordu. Sonuçlar belediye meclisi dağılımını temel alır.';
     }
 
+    if(p.not){ $('#dInfoNote').style.display = 'flex'; $('#dInfoNote').textContent = 'ⓘ ' + p.not; }
     $('#dSeatsLabel').textContent = (DATA.tur !== 'genel' || YEARS_NO_VEKIL.has(currentYear)) ? 'Vekil / Sandalye' : 'Milletvekili';
     $('#dSeats').textContent = (DATA.tur !== 'genel' || YEARS_NO_VEKIL.has(currentYear)) ? (p.toplamVekil || '—') : p.toplamVekil;
     $('#dTurnout').textContent = p.katilim!=null ? '%'+p.katilim.toFixed(2) : '—';
@@ -2002,7 +2060,9 @@
     // dosyalar - ikisini paralel fetch etmek, sirayla beklemekten daha hizli.
     const [, data] = await Promise.all([ensureGeoForYear(year), fetchElection(year)]);
     if(ticket !== loadYearTicket) return; // bu arada baska bir yil secildi, bu sonuc artik gecersiz
-    DATA = data;
+    const kayit = await oylamaKaydi(year, data);
+    if(ticket !== loadYearTicket) return;
+    DATA = kayit;
     MAJOR = DATA.majorPartiler;
     ilByPlaka = Object.fromEntries(DATA.iller.map(p => [p.plaka, p]));
     districtsByPlaka = {};
@@ -2029,6 +2089,7 @@
     renderElectionBar();
     renderNationalSummary();
     renderYearPicker();
+    renderOylamaToggle();
     renderSeatBar();
     renderYurtdisiCard();
     renderCountryMap();

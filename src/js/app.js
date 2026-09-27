@@ -43,7 +43,9 @@
     // dosyalar - ikisini paralel fetch etmek, sirayla beklemekten daha hizli.
     const [, data] = await Promise.all([ensureGeoForYear(year), fetchElection(year)]);
     if(ticket !== loadYearTicket) return; // bu arada baska bir yil secildi, bu sonuc artik gecersiz
-    DATA = data;
+    const kayit = await oylamaKaydi(year, data);
+    if(ticket !== loadYearTicket) return;
+    DATA = kayit;
     MAJOR = DATA.majorPartiler;
     ilByPlaka = Object.fromEntries(DATA.iller.map(p => [p.plaka, p]));
     districtsByPlaka = {};
@@ -70,6 +72,7 @@
     renderElectionBar();
     renderNationalSummary();
     renderYearPicker();
+    renderOylamaToggle();
     renderSeatBar();
     renderYurtdisiCard();
     renderCountryMap();

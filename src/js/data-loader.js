@@ -85,3 +85,7 @@
     }
     return feats;
   }
+  // yerel secim meclis kayitlari (il genel meclisi / belediye meclisi): bkz. election-config.js
+  function loadOylama(year, kisa){
+    return fetchJSON("data/meclis_harita/"+year+"_"+kisa+".json", null);
+  }
