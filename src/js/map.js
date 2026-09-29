@@ -59,21 +59,10 @@
     return null; // 2002+ -> modern (GEO_MODERN), birlestirme gerekmiyor
   }
   const GEO_MODERN = GEO;
-  const geoEraCache = {};
-  let currentGeoEra = null;
+  // Fetching must not mutate the visible map: only the winning loadYear commits it.
   async function ensureGeoForYear(year){
     const suffix = eraSuffixForYear(year);
-    if(suffix === currentGeoEra) return;
-    currentGeoEra = suffix;
-    if(suffix === null){
-      GEO = GEO_MODERN;
-    } else if(geoEraCache[suffix]){
-      GEO = geoEraCache[suffix];
-    } else {
-      GEO = await fetchJSON("geo/eras/"+suffix+".geojson");
-      geoEraCache[suffix] = GEO;
-    }
-    countryProject = computeProjection(GEO.features, PAD);
+    return suffix === null ? GEO_MODERN : fetchJSON("geo/eras/"+suffix+".geojson");
   }
 
   // 2024 yerel seciminde ilce meclisi verisi olan 4 buyuksehir - artik bir
@@ -151,6 +140,7 @@
   }
 
   function renderCountryMap(){
+    cancelDistrictLoad();
     view = {level:'country', plaka:null};
     svg.innerHTML = '';
     pathByPlaka = {}; pathByGeomId = {};
@@ -172,19 +162,15 @@
     applyMapMode();
   }
 
-  // Ucuz, senkron on-kontrol: bu ilcenin HIC mahalle poligonu var mi (yildan
-  // bagimsiz, MAHALLE_GEO hep eager yuklu). Gercek oy verisi (yil bazli,
-  // lazy) icin mahalleDataForDistrict'i await edin.
-  function mahalleGeoExistsForDistrict(geomId){
-    return !!MAHALLE_GEO[geomId];
-  }
-
-  async function mahalleDataForDistrict(geomId){
-    const geoRows = MAHALLE_GEO[geomId];
-    if(!geoRows || DATA.oylama) return null; // mahalle oylari yalniz baskanlik secimi icin var
-    const votesForYear = await loadMahalleVotesForYear(currentYear);
+  async function mahalleDataForDistrict(geomId, year, oylama){
+    if(oylama || !(year in MAHALLE_COVERAGE)) return null;
+    const votesForYear = await loadMahalleVotesForYear(year);
     const voteRows = votesForYear[geomId];
-    if(!voteRows) return null;
+    if(!voteRows || !Object.keys(voteRows).length) return null;
+    // Do not download the large geometry for a district without neighborhood votes.
+    const geometry = await loadMahalleGeometry();
+    const geoRows = geometry[geomId];
+    if(!geoRows) return null;
     const rows = [];
     for(const osmId in voteRows){
       const g = geoRows[osmId]; if(!g) continue;
@@ -192,6 +178,36 @@
       rows.push({id:osmId, ad:g.ad, geometry:g.geometry, secmen:v.secmen, sandik:v.sandik, katilim:v.katilim, kazanan:v.kazanan, oy:v.oy});
     }
     return rows.length ? rows : null;
+  }
+
+  let districtLoadTicket = 0;
+  function cancelDistrictLoad(){
+    districtLoadTicket++;
+    clearLoadStatus();
+  }
+  async function openDistrict(plaka, geomId){
+    const d = districtByGeomId[geomId];
+    if(!d) return;
+    const ticket = ++districtLoadTicket;
+    const yearTicket = loadYearTicket;
+    const origin = view;
+    const year = currentYear;
+    const oylama = DATA.oylama;
+    const stillCurrent = () => ticket === districtLoadTicket && yearTicket === loadYearTicket && view === origin;
+    selectDistrict(d, plaka);
+    showLoadStatus('Mahalle verileri yükleniyor…');
+    try{
+      const rows = await mahalleDataForDistrict(geomId, year, oylama);
+      if(!stillCurrent()) return;
+      clearLoadStatus();
+      if(rows) renderMahalleMap(plaka, geomId, rows);
+      else if(pathByGeomId[geomId]) pathByGeomId[geomId].scrollIntoView({block:'nearest'});
+    }catch(error){
+      if(!stillCurrent()) return;
+      showLoadStatus('Mahalle verileri yüklenemedi. İlçe sonuçları gösteriliyor.', () => {
+        if(stillCurrent()) openDistrict(plaka, geomId);
+      });
+    }
   }
 
   // Bazı ilçeler için gerçek tarihsel poligon birleşimi var (bkz.
@@ -233,6 +249,7 @@
   function bosDolgu(geomId){ return gecisNotu(geomId) ? 'url(#hatchGecis)' : 'var(--map-empty)'; }
 
   function renderProvinceMap(plaka){
+    cancelDistrictLoad();
     view = {level:'province', plaka};
     const allDataFeats = districtFeaturesForProvince(plaka);
     // Sadece GERCEKTEN sonucu olan ilceler tiklanabilir/etkilesimli olsun -
@@ -305,17 +322,7 @@
       el.dataset.geomId = geomId;
       el.addEventListener('mousemove', e=>showTooltip(e, {kind:'ilce', plaka, geomId}));
       el.addEventListener('mouseleave', hideTooltip);
-      el.addEventListener('click', async ()=>{
-        const d = districtByGeomId[geomId];
-        // Mahalle haritasina inerken bile once ilcenin KENDI verisini panelde
-        // goster - tiklanan yerin verisi eskisini ezmeli, kullanici sonra
-        // istedigi mahalleye ayrica tiklayabilir.
-        if(d) selectDistrict(d, plaka);
-        if(mahalleGeoExistsForDistrict(geomId)){
-          const rows = await mahalleDataForDistrict(geomId);
-          if(rows){ renderMahalleMap(plaka, geomId, rows); return; }
-        }
-      });
+      el.addEventListener('click', ()=> openDistrict(plaka, geomId));
       svg.appendChild(el);
       pathByGeomId[geomId]=el;
     }
