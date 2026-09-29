@@ -34,6 +34,11 @@
 
   <div class="year-timeline" id="yearPicker"></div>
 
+  <div id="loadStatus" class="load-status" data-state="loading">
+    <span id="loadMessage" role="status" aria-live="polite">Harita verileri yükleniyor…</span>
+    <button id="retryLoad" type="button" hidden>Yeniden dene</button>
+  </div>
+  <main id="results" inert aria-busy="true">
   <div class="oylama-tabs" id="oylamaToggle" hidden>
     <button data-oylama="baskan">Belediye Başkanı</button>
     <button data-oylama="igm">İl Genel Meclisi</button>
@@ -165,6 +170,8 @@
     <div class="seatbar-track" id="yurtdisiTrack"></div>
     <div class="legend" id="yurtdisiLegend"></div>
   </section>
+
+  </main>
 
   <footer>
     <div class="footer-brand">Türkiye Seçim Tarihi Atlası</div>
