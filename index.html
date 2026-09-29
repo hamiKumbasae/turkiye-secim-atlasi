@@ -443,7 +443,7 @@
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 27.09.2026 · veri sürümü 8fd398b8be</div>
+    <div class="footer-disclaimer">Son güncelleme: 29.09.2026 · veri sürümü a338b61f57</div>
   </footer>
 </div>
 
@@ -475,7 +475,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = '8fd398b8be';
+  const VERI_SURUMU = 'a338b61f57';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -1510,7 +1510,9 @@
   function birlesimNotuHtml(geomId){
     const b = ((HARITA_NOTLARI && HARITA_NOTLARI.birlesimler) || {})[geomId];
     if(!b) return '';
-    let h = '<div class="row tip-not"><span>' + escapeHtml('Bugünkü sınırlarla: ' + b.ilceler.join(', ')) + '</span></div>';
+    // paylar: mahalle duzeyinde bolunen bugunku ilcenin bu poligona dusen alan payi (ornek 'Ataşehir %60')
+    const ad = x => (b.paylar && b.paylar[x] != null) ? x + ' (%' + Math.round(b.paylar[x] * 100) + ')' : x;
+    let h = '<div class="row tip-not"><span>' + escapeHtml('Bugünkü sınırlarla: ' + b.ilceler.map(ad).join(', ')) + '</span></div>';
     for(const c of (b.cogunluk || [])){
       // kisa, eksiz: 'Konyaaltı: %92 Merkez, Kemer 1 birim'
       const d = (c.digerleri || []).map(x => x[0] + ' ' + x[1] + ' birim').join(', ');
