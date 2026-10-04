@@ -229,3 +229,17 @@ test('the address keeps the view and a shared link opens it again', async t => {
   assert.equal(await other.locator('#modeGroup button.active').getAttribute('data-mode'), 'parti');
   assert.match(await other.locator('#mapBreadcrumbName').textContent(), /Ankara/);
 });
+
+test('CSV download contains province and district rows of the open election', async t => {
+  const {page} = await setup(t);
+  await ready(page);
+  await page.locator('#btnTableView').click();
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#btnCsv').click()]);
+  assert.equal(download.suggestedFilename(), 'secim_2023.csv');
+  const text = await fs.readFile(await download.path(), 'utf8');
+  assert(text.startsWith('\ufeff'), 'UTF-8 BOM for Excel');
+  const lines = text.slice(1).trimEnd().split('\r\n');
+  assert.match(lines[0], /^seçim,düzey,plaka,il,ilçe,/);
+  assert.equal(lines.filter(l => l.startsWith('2023,il,')).length, 81);
+  assert(lines.filter(l => l.startsWith('2023,ilçe,')).length > 900);
+});

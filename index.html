@@ -425,6 +425,7 @@
       <div class="table-head-row">
         <div class="table-title" id="tableTitle">Türkiye · İl Sonuçları</div>
         <input id="tableSearch" type="text" placeholder="İl ara…" autocomplete="off">
+        <button class="link-btn" id="btnCsv" type="button" title="Bu seçimin il ve ilçe sonuçlarını CSV olarak indirir">CSV indir ↓</button>
       </div>
       <div class="table-scroll">
         <table class="data-table" id="ilTable">
@@ -463,7 +464,7 @@
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü f2bb2dbe15</div>
+    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü 04bab0d9b0</div>
   </footer>
 </div>
 
@@ -495,7 +496,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = 'f2bb2dbe15';
+  const VERI_SURUMU = '04bab0d9b0';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -1055,7 +1056,9 @@
     html += '<p>Yurtdışı seçmen oyları hiçbir ile bağlı olmadığı için haritaya dahil edilmez, mevcut olduğu seçimlerde ayrı bir panelde gösterilir.</p>';
     html += '<p><a class="link-btn" href="yontem.html" style="text-decoration:underline;">Kaynaklar ve yöntem sayfası →</a> (dönem sınırları, harita modları, bilinen eksikler)</p>';
     html += '<p>Bu bir kişisel veri derleme çalışmasıdır, resmî bir YSK yayını değildir. Kaynak kodu:<br><a class="link-btn" href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener" style="text-decoration:underline;">github.com/hamiKumbasae/turkiye-secim-atlasi</a></p>';
+    html += '<p><button class="link-btn" id="drawerCsv" type="button" style="text-decoration:underline;">Bu seçimin il ve ilçe sonuçlarını indir (CSV) ↓</button></p>';
     $('#drawerBody').innerHTML = html;
+    $('#drawerCsv').addEventListener('click', csvIndir);
   }
 
   function openDrawer(){
@@ -2212,6 +2215,64 @@
     $$('#ilTable th').forEach(th=>th.classList.toggle('sorted', th.dataset.key===sortKey));
   }
 
+
+  // ---------------- CSV indirme ----------------
+  // Acik secimin il ve ilce sonuclari tek tabloda: her parti icin oy, oran (%) ve varsa vekil /
+  // meclis sandalyesi. UTF-8 BOM'lu, virgulle ayrilmis (Excel'de Turkce karakterler bozulmasin).
+  function csvHucre(v){
+    if(v == null) return '';
+    const s = String(v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function csvMetni(){
+    const satirlar = [
+      ...DATA.iller.map(r => ['il', r]),
+      ...(DATA.ilceler || []).filter(r => r.oy && Object.keys(r.oy).length || r.not).map(r => ['ilçe', r]),
+    ];
+    if(hasYurtdisiData()) satirlar.push(['yurt dışı', Object.assign({ad: 'Yurt dışı'}, DATA.yurtdisi)]);
+    const partiler = [...MAJOR];
+    for(const [, r] of satirlar) for(const p of Object.keys(r.oy || {})) if(!partiler.includes(p)) partiler.push(p);
+    const vekilVar = satirlar.some(([, r]) => r.vekil && Object.keys(r.vekil).length);
+    const sandalyeVar = satirlar.some(([, r]) => Object.values(r.oy || {}).some(isSeatBased));
+    const bas = ['seçim', 'düzey', 'plaka', 'il', 'ilçe', 'seçmen', 'sandık', 'geçerli oy', 'katılım %', 'kazanan'];
+    if(vekilVar) bas.push('toplam vekil');
+    for(const p of partiler){
+      bas.push(p + ' oy', p + ' %');
+      if(vekilVar) bas.push(p + ' vekil');
+      if(sandalyeVar) bas.push(p + ' sandalye');
+    }
+    bas.push('not');
+    const ad = csvAnahtari();
+    const out = [bas];
+    for(const [duzey, r] of satirlar){
+      const il = duzey === 'il' ? r.ad : (duzey === 'ilçe' ? (ilByPlaka[r.plaka] || {}).ad : '');
+      const row = [ad, duzey, duzey === 'yurt dışı' ? '' : r.plaka, il, duzey === 'ilçe' ? r.ad : '',
+                   r.secmen, r.sandik, r.gecerliOy, r.katilim, r.kazanan];
+      if(vekilVar) row.push(r.toplamVekil);
+      for(const p of partiler){
+        const o = (r.oy || {})[p];
+        row.push(o ? o.oy : null, o ? (isSeatBased(o) ? null : o.oran) : null);
+        if(vekilVar) row.push((r.vekil || {})[p]);
+        if(sandalyeVar) row.push(o ? o.sandalye : null);
+      }
+      row.push(r.not);
+      out.push(row);
+    }
+    return '﻿' + out.map(r => r.map(csvHucre).join(',')).join('\r\n') + '\r\n';
+  }
+  // secim anahtari (ornek 2023, 2019yerel_bm): dosya adi ve 'seçim' sutunu
+  function csvAnahtari(){
+    return currentYear + (DATA.oylama && DATA.oylama !== 'baskan' ? '_' + DATA.oylama : '');
+  }
+  function csvIndir(){
+    const blob = new Blob([csvMetni()], {type: 'text/csv;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'secim_' + csvAnahtari() + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  $('#btnCsv').addEventListener('click', csvIndir);
 
   // ---------------- paylasilabilir baglanti ----------------
   // Gorunum adres cubugundaki # kisminda tutulur: #secim=1977&il=6&ilce=TR-D-06-001&mod=parti&parti=CHP
