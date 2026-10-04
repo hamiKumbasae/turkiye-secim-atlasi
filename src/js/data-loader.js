@@ -14,10 +14,24 @@
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
   const VERI_SURUMU = '__VERI_SURUMU__';
+  // Tek dosya surumu (turkiye-secim-haritasi/scripts/build.py) ayni dosyalari sayfaya gomer:
+  // window.__EMBEDDED_GZ__ = {"data/elections/2023.json": "<gzip+base64>", ...}. Varsa veri fetch
+  // yerine oradan acilir; boylece index.html file:// ile cift tiklayinca da calisir.
+  const GOMULU_VERI = window.__EMBEDDED_GZ__ || null;
+  async function gomuluAc(b64){
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    return JSON.parse(await new Response(stream).text());
+  }
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
       FETCH_CACHE[path] = (async () => {
+        if(GOMULU_VERI){
+          if(path in GOMULU_VERI) return gomuluAc(GOMULU_VERI[path]);
+          if(fallback !== undefined) return fallback;
+          throw new Error('Veri bulunamadı: '+path);
+        }
         const res = await fetch(path + '?v=' + VERI_SURUMU);
         if(!res.ok){
           if(res.status === 404 && fallback !== undefined) return fallback;

@@ -38,6 +38,8 @@ def main():
     css = STYLES.read_text(encoding="utf-8")
     js = "\n".join((JS_DIR / name).read_text(encoding="utf-8") for name in JS_FILES)
 
+    # tek dosya surumu (kaynak repo) buraya gomulu veriyi koyar; bu yayinda veri fetch edilir
+    html = html.replace("<!--__GOMULU_VERI__-->\n", "")
     html = html.replace(CSS_PLACEHOLDER, css)
     html = html.replace(JS_PLACEHOLDER, js)
     # veri surumu: data/ ve geo/ iceriginin ozeti (her yayinda degisir -> tarayici onbellegi atlanir)
