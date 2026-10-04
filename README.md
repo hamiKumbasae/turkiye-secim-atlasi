@@ -109,3 +109,13 @@ kontrollü olarak uygulanır. İlk yükleme, yeniden deneme, tarihsel/modern yı
 geçişi, aynı dönem için eşzamanlı istekler, mahallelerin ihtiyaç anında yüklenmesi,
 eski mahalle yanıtının yeni seçimi bozmaması ve mobil hata akışı kapsanır.
 GitHub Actions aynı testleri push ve pull request olaylarında çalıştırır.
+
+## 04.10.2026 veri güncellemesi
+
+2007 referandumu 923 ilçeye tamamlandı. İstanbul 1989/1991 tarihî
+sınır katmanları, 2009/2011 ana ilçe birleşimleri ve Tillo meclis
+eşleştirmeleri kaynak depodan aktarıldı. 2019/2024 belediye meclisinde
+973 ilçenin tamamı sonuç içeriyor. Daha eski belirsiz sınırlar ve
+başkanlık/genel hattındaki kaynak eksikleri açıklamalı kalır.
+Bu yayın kopyası `export_static.py --public` ile üretilir; ham PDF ve
+mahalle atama kaynak tabloları burada yayımlanmaz.
