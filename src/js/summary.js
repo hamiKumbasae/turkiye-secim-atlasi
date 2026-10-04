@@ -97,8 +97,11 @@
     html += '<div class="drawer-section-title">Kaynak ve metodoloji</div>';
     html += '<p>Seçim sonuçları ağırlıklı olarak YSK ve diğer resmî kamu kaynaklarından derlenmiştir. Eksik tarihsel dönemlerde ikincil kaynaklardan yararlanılmıştır. Veriler yayın öncesinde normalize edilip doğrulama kontrollerinden geçirilir.</p>';
     html += '<p>Yurtdışı seçmen oyları hiçbir ile bağlı olmadığı için haritaya dahil edilmez, mevcut olduğu seçimlerde ayrı bir panelde gösterilir.</p>';
+    html += '<p><a class="link-btn" href="yontem.html" style="text-decoration:underline;">Kaynaklar ve yöntem sayfası →</a> (dönem sınırları, harita modları, bilinen eksikler)</p>';
     html += '<p>Bu bir kişisel veri derleme çalışmasıdır, resmî bir YSK yayını değildir. Kaynak kodu:<br><a class="link-btn" href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener" style="text-decoration:underline;">github.com/hamiKumbasae/turkiye-secim-atlasi</a></p>';
+    html += '<p><button class="link-btn" id="drawerCsv" type="button" style="text-decoration:underline;">Bu seçimin il ve ilçe sonuçlarını indir (CSV) ↓</button></p>';
     $('#drawerBody').innerHTML = html;
+    $('#drawerCsv').addEventListener('click', csvIndir);
   }
 
   function openDrawer(){

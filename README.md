@@ -59,7 +59,7 @@ data/mahalle_votes/<year>.json  Mahalle/muhtarlık düzeyi oy verisi olan
                              edilir.
 
 geo/il_sinirlari.geojson, ilce_sinirlari.geojson, ilce_sinirlari_hist.geojson,
-geo/mahalle_geo.json (ilk uygun ilçe seçiminde yüklenir),
+geo/mahalle/<ilçe>.json (ilçe başına mahalle poligonları, o ilçeye inilince yüklenir),
 geo/district_splits.json, geo/meclis_2024.json,
 geo/mahalle_coverage.json, geo/eras/<dönem>.geojson  Harita geometrisi.
 
@@ -70,6 +70,18 @@ index.html (repo kökü)      build.py'nin çıktısı, commit'lenir.
 `scripts/export_static.py` ile üretilir ve buraya kopyalanır — güncelleme
 akışı için o deponun README'sine bakın.
 
+## Site özellikleri
+
+- **Harita modları:** Kazanan, Katılım, Parti (oy oranı) ve **Değişim** (seçilen partinin aynı
+  türdeki önceki seçime göre oy oranı farkı, yüzde puan; sınırı değişen ilçe karşılaştırılmaz).
+- **Paylaşılabilir bağlantı:** seçim, il, ilçe/mahalle, mod, parti ve oylama türü adresin `#`
+  kısmında (`#secim=1977&il=6&mod=parti&parti=CHP`); "Bağlantıyı kopyala" düğmesi.
+- **Kaynaklar ve yöntem:** [`yontem.html`](yontem.html) — kaynaklar, tarihsel sınırlar, harita
+  okuma, bilinen eksikler; sade dille.
+- **CSV indirme:** tablo görünümünde ve Kaynaklar çekmecesinde; açık seçimin il ve ilçe sonuçları.
+- **Erişilebilirlik:** renk körü dostu palet (Okabe–Ito), klavyeyle gezinme ve ekran okuyucu
+  etiketleri, telefonda yatay kayma yok.
+
 ## Veri kaynakları
 
 Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir.
@@ -78,7 +90,9 @@ Resmî YSK yayını değildir. Kaynak ayrıntıları ve metodoloji için sitedek
 
 ## Lisans
 
-MIT — bkz. [LICENSE](LICENSE).
+- **Kod:** MIT — bkz. [LICENSE](LICENSE).
+- **Veri** (`data/`, `geo/`): CC BY-SA 4.0; OpenStreetMap'ten türetilen mahalle sınırları ODbL
+  (© OpenStreetMap katkıcıları) — bkz. [LICENSE-DATA.md](LICENSE-DATA.md).
 
 ## Yükleme ve hata durumları
 
@@ -87,10 +101,14 @@ sadece son isteğin verileri ekrana uygulanır. Yükleme sırasında eski sonuç
 soluk ve etkileşimsiz tutulur; başka yıl veya seçim türü seçilebilir.
 Bağlantı hatalarında **Yeniden dene** aynı isteği sayfayı yenilemeden tekrarlar.
 
-`geo/mahalle_geo.json` açılışta indirilmez. Önce tıklanan ilçenin seçilen yılda
-mahalle oy verisi olup olmadığı kontrol edilir; varsa geometri ilk kez yüklenir
-ve oturum boyunca önbellekte tutulur. Şu an geometri ilçe dosyalarına bölünmüş
-değildir; ilk uygun ilçe seçiminde tüm geometri dosyası indirilir.
+Açılışta yalnız il sınırları ve seçilen seçimin sonuçları indirilir (~170 KB
+sıkıştırılmış); harita bunlarla hemen çizilir. İlçe sınırları (~1 MB) ardından arka
+planda yüklenir; kullanıcı daha önce bir ile tıklarsa "İlçe sınırları yükleniyor…"
+gösterilir.
+
+Mahalle poligonları ilçe başına ayrı dosyadadır (`geo/mahalle/<ilçe>.json`, en büyüğü
+~150 KB). Önce tıklanan ilçenin seçilen yılda mahalle oy verisi olup olmadığı kontrol
+edilir; varsa yalnız o ilçenin poligonları indirilir ve oturum boyunca önbellekte tutulur.
 
 ## Otomatik testler
 

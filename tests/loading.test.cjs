@@ -42,7 +42,9 @@ test('initial load excludes neighborhood geometry and votes', async t => {
   const {page, requests} = await setup(t);
   await ready(page);
   assert.equal(await activeYear(page), '2023');
-  assert(!requests.includes('geo/mahalle_geo.json'));
+  assert(!requests.some(x => x.startsWith('geo/mahalle/')));
+  // ilce sinirlari ilk cizimi beklemez: arka planda sonradan iner
+  assert(!requests.slice(0, requests.indexOf('data/elections/2023.json') + 1).includes('geo/ilce_sinirlari.geojson'));
   assert(!requests.some(x => x.startsWith('data/mahalle_votes/')));
  });
 
@@ -107,7 +109,7 @@ test('two years in the same era share an in-flight geometry request safely', asy
 test('district drilldown loads neighborhood geometry on demand and retries failures', async t => {
   let attempts = 0;
   const {page, requests} = await setup(t, async (name, route) => {
-    if(name === 'geo/mahalle_geo.json' && ++attempts === 1){ await route.fulfill({status:503, body:'unavailable'}); return true; }
+    if(name === 'geo/mahalle/TR-D-01-001.json' && ++attempts === 1){ await route.fulfill({status:503, body:'unavailable'}); return true; }
   });
   await ready(page);
   await page.locator('#mapSvg path[data-plaka="1"]').click();
@@ -132,7 +134,7 @@ test('late neighborhood response cannot replace a newly selected election', asyn
   while(!release) await tick(page);
   await year(page, '2018'); await ready(page);
   release();
-  await page.waitForResponse('**/geo/mahalle_geo.json*');
+  await page.waitForResponse('**/geo/mahalle/TR-D-01-001.json*');
   await tick(page);
   assert.equal(await activeYear(page), '2018');
   assert.equal(await page.locator('#mapSvg path[data-mahalle-id]').count(), 0);
@@ -177,4 +179,92 @@ test('mobile viewport exposes retry and preserves controls after recovery', asyn
   await page.locator('#retryLoad').click(); await ready(page);
   assert.equal(await activeYear(page), '2018');
   assert.equal(await page.locator('#results').evaluate(el => el.inert), false);
+});
+
+test('district boundaries load in the background and recover when the first request fails', async t => {
+  let attempts = 0;
+  const {page} = await setup(t, async (name, route) => {
+    if(name === 'geo/ilce_sinirlari.geojson' && ++attempts === 1){ await route.abort('internetdisconnected'); return true; }
+  });
+  await ready(page);
+  while(attempts < 1) await tick(page);
+  await page.locator('#mapSvg path[data-plaka="6"]').click();
+  await page.locator('#mapSvg path[data-geom-id]').first().waitFor();
+  assert.equal(attempts, 2);
+  assert(await page.locator('#mapSvg path[data-geom-id]').count() > 20);
+});
+
+test('change mode compares with the previous election of the same type', async t => {
+  const {page, requests} = await setup(t);
+  await ready(page);
+  await page.locator('#modeGroup button[data-mode="degisim"]').click();
+  await page.locator('#seqNote:not([hidden])').waitFor();
+  assert(requests.includes('data/elections/2018.json'));
+  assert.match(await page.locator('#seqNote').textContent(), /2018 → 2023/);
+  const fills = await page.locator('#mapSvg path.geo-path').evaluateAll(els => els.map(el => el.getAttribute('fill')));
+  assert(fills.filter(f => f && f.startsWith('hsl(')).length > 70);
+  // the oldest election has nothing to compare with
+  await year(page, '1950'); await ready(page);
+  assert.equal(await page.locator('#modeGroup button[data-mode="degisim"]').isHidden(), true);
+});
+
+test('the address keeps the view and a shared link opens it again', async t => {
+  const {page} = await setup(t);
+  await ready(page);
+  await year(page, '1977'); await ready(page);
+  await page.locator('#modeGroup button[data-mode="parti"]').click();
+  await page.locator('#partySelect').selectOption('CHP');
+  await page.locator('#mapSvg path[data-plaka="6"]').click();
+  await page.locator('#mapSvg path[data-geom-id]').first().waitFor();
+  const hash = new URL(page.url()).hash;
+  assert.match(hash, /secim=1977/); assert.match(hash, /il=6/); assert.match(hash, /mod=parti/); assert.match(hash, /parti=CHP/);
+
+  const other = page; // ayni yonlendirmeyle sifirdan ac
+  await other.goto('about:blank');
+  await other.goto('http://atlas.test/' + hash);
+  await other.locator('#results[aria-busy="false"]').waitFor();
+  await other.locator('#mapSvg path[data-geom-id]').first().waitFor();
+  assert.equal(await other.locator('#yearPicker .active').textContent(), '1977');
+  assert.equal(await other.locator('#partySelect').inputValue(), 'CHP');
+  assert.equal(await other.locator('#modeGroup button.active').getAttribute('data-mode'), 'parti');
+  assert.match(await other.locator('#mapBreadcrumbName').textContent(), /Ankara/);
+});
+
+test('CSV download contains province and district rows of the open election', async t => {
+  const {page} = await setup(t);
+  await ready(page);
+  await page.locator('#btnTableView').click();
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#btnCsv').click()]);
+  assert.equal(download.suggestedFilename(), 'secim_2023.csv');
+  const text = await fs.readFile(await download.path(), 'utf8');
+  assert(text.startsWith('\ufeff'), 'UTF-8 BOM for Excel');
+  const lines = text.slice(1).trimEnd().split('\r\n');
+  assert.match(lines[0], /^seçim,düzey,plaka,il,ilçe,/);
+  assert.equal(lines.filter(l => l.startsWith('2023,il,')).length, 81);
+  assert(lines.filter(l => l.startsWith('2023,ilçe,')).length > 900);
+});
+
+test('map regions are keyboard accessible and a colour-blind palette can be switched on', async t => {
+  const {page} = await setup(t);
+  await ready(page); await tick(page);
+  const ankara = page.locator('#mapSvg path[data-plaka="6"]');
+  assert.equal(await ankara.getAttribute('tabindex'), '0');
+  assert.match(await ankara.getAttribute('aria-label'), /^Ankara: .+ önde$/);
+  await ankara.focus(); await page.keyboard.press('Enter');
+  await page.locator('#mapSvg path[data-geom-id]').first().waitFor();
+  assert.match(await page.locator('#mapBreadcrumbName').textContent(), /Ankara/);
+  await page.locator('#btnBackCountry').click();
+  const before = await page.locator('#mapSvg path[data-plaka="6"]').getAttribute('fill');
+  await page.locator('#btnRenkKoru').click();
+  assert.equal(await page.locator('#btnRenkKoru').getAttribute('aria-pressed'), 'true');
+  const after = await page.locator('#mapSvg path[data-plaka="6"]').getAttribute('fill');
+  assert.notEqual(after, before);
+  assert.match(after, /^#(E69F00|0072B2|009E73|D55E00|56B4E9|CC79A7|F0E442|9a9a9a)$/);
+});
+
+test('phone width has no horizontal page scroll', async t => {
+  const {page} = await setup(t);
+  await page.setViewportSize({width:390, height:844});
+  await ready(page);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390);
 });

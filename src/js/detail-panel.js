@@ -44,6 +44,8 @@
 
   function selectProvince(plaka){
     selectedPlaka = plaka;
+    seciliIlce = null;
+    durumuYaz();
     detailView = 'baskanlik';
     $$('.geo-path').forEach(p=>p.classList.toggle('selected', +p.dataset.plaka===plaka));
     const p = ilByPlaka[plaka]; if(!p) return;
@@ -222,6 +224,8 @@
   }
 
   function selectDistrict(d, plaka){
+    seciliIlce = d.geomId || null;
+    durumuYaz();
     $$('.geo-path').forEach(p=>p.classList.toggle('selected', p.dataset.geomId===d.geomId));
     $$('.district-row').forEach(r=>r.classList.toggle('dselected', r.dataset.geomId===d.geomId));
     const p = ilByPlaka[plaka];

@@ -24,14 +24,14 @@
     if(active) active.scrollIntoView({inline:'center', block:'nearest'});
   }
 
-  function switchTur(tur){
+  function switchTur(tur, year){
     currentTur = tur;
     $('#btnTurGenel').classList.toggle('active', tur==='genel');
     $('#btnTurReferandum').classList.toggle('active', tur==='referandum');
     $('#btnTurYerel').classList.toggle('active', tur==='yerel');
     $('#btnTurCB').classList.toggle('active', tur==='cumhurbaskanligi');
     renderYearPicker();
-    loadYear(TUR_YEARS[tur][0]);
+    return loadYear(year || TUR_YEARS[tur][0]);
   }
 
   // Fetch async oldugu icin hizli art arda yil degistirmede eski istek gec
@@ -89,6 +89,9 @@
       renderTable();
       setResultsBusy(false);
       clearLoadStatus();
+      // ilk ile inmeden once ilce sinirlarini arka planda indir (hata olursa ile inerken yeniden denenir)
+      setTimeout(() => ensureIlceGeo().catch(() => {}), 0);
+      durumuYaz();
     }catch(error){
       if(ticket !== loadYearTicket) return;
       // Keep old results inert: they must not be mistaken for the requested election.
@@ -101,4 +104,4 @@
   $('#btnTurYerel').addEventListener('click', ()=> switchTur('yerel'));
   $('#btnTurCB').addEventListener('click', ()=> switchTur('cumhurbaskanligi'));
 
-  switchTur('genel');
+  baglantiyiUygula(); // adresteki #secim=... gorunumu, yoksa son genel secim

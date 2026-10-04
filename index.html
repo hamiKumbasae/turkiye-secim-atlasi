@@ -70,6 +70,13 @@
   .tur-tabs button{font:inherit; font-family:'Inter',sans-serif; font-size:13px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; padding:9px 1px 11px; border:none; background:none; color:var(--ink-3); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-1px; transition:color .12s;}
   .tur-tabs button:hover{color:var(--ink-1);}
   .tur-tabs button.active{color:var(--ink-1); border-bottom-color:var(--ink-1);}
+  /* telefonda dort sekme tek satira sigmiyor, sayfa yatay kayiyordu: yatay kaydirilan satir */
+  @media (max-width:600px){
+    .tur-tabs{gap:18px; overflow-x:auto; scrollbar-width:none;}
+    .tur-tabs::-webkit-scrollbar{display:none;}
+    .tur-tabs button{flex:none; font-size:12px;}
+    .wrap{padding-inline:16px;}
+  }
 
   /* ---- year timeline ---- */
   .year-timeline{display:flex; align-items:center; gap:0; overflow-x:auto; padding:6px 0 20px; margin-bottom:22px; border-bottom:1px solid var(--line); scrollbar-width:thin;}
@@ -151,6 +158,12 @@
   .geo-path{stroke:var(--map-stroke); stroke-width:1; cursor:pointer; transition:filter .1s;}
   .geo-path:hover{filter:brightness(1.12); stroke-width:1.6;}
   .geo-path.selected{stroke:var(--ink-1); stroke-width:2.2;}
+  .geo-path:focus{outline:none;}
+  .geo-path:focus-visible{stroke:var(--ink-1); stroke-width:2.8; filter:brightness(1.12);}
+  .toggle-btn{font:inherit; font-size:12.5px; font-weight:600; padding:6px 11px; border:1px solid var(--line); border-radius:8px; background:var(--surface-1); color:var(--ink-2); cursor:pointer;}
+  .toggle-btn.active{background:var(--ink-1); color:var(--surface-0); border-color:var(--ink-1);}
+  .toggle-btn:hover:not(.active){background:var(--surface-2);}
+  button:focus-visible, select:focus-visible, a:focus-visible{outline:2px solid var(--ink-1); outline-offset:2px;}
   /* Bu donem icin gercek sonucu olmayan ilce (orn. henuz kurulmamis modern
      ilce) - haritada bos birakmamak icin cizilir ama tiklanabilir/vurgulanir
      GORUNMEZ, yaniltici bir "veri var" izlenimi vermez. */
@@ -171,6 +184,8 @@
 
   .seq-legend{display:flex; align-items:center; gap:8px; font-size:11px; color:var(--ink-3); margin-top:10px;}
   .seq-ramp{height:8px; flex:1; border-radius:4px;}
+  #seqLegendWrap{flex-direction:column; align-items:stretch;}
+  .seq-note{font-size:11px; color:var(--ink-3); margin-top:4px; line-height:1.4;}
 
   .winner-legend{display:flex; flex-wrap:wrap; gap:7px 18px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line-soft); font-size:12px; color:var(--ink-2);}
   .winner-legend .wl-item{display:flex; align-items:center; gap:6px;}
@@ -297,6 +312,7 @@
       <span class="brand-sub">1950–2024 Türkiye seçim sonuçları ve tarihsel seçim coğrafyası</span>
     </div>
     <nav class="brand-links">
+      <a href="yontem.html">Kaynaklar ve yöntem</a>
       <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub ↗</a>
     </nav>
   </header>
@@ -332,6 +348,7 @@
         <span id="sourceBadgeText">YSK Resmî Veri</span>
       </button>
       <button class="link-btn" id="btnKaynaklar">Kaynaklar →</button>
+      <button class="link-btn" id="btnPaylas" type="button" title="Bu görünümün (seçim, il, ilçe, harita modu) bağlantısını kopyalar">Bağlantıyı kopyala</button>
     </div>
   </div>
 
@@ -358,8 +375,10 @@
             <button data-mode="winner" class="active">Kazanan</button>
             <button data-mode="katilim">Katılım</button>
             <button data-mode="parti">Parti</button>
+            <button data-mode="degisim" title="Seçilen partinin oy oranındaki değişim (önceki seçime göre, yüzde puan)">Değişim</button>
           </div>
-          <select id="partySelect" style="display:none"></select>
+          <select id="partySelect" style="display:none" aria-label="Parti"></select>
+          <button id="btnRenkKoru" class="toggle-btn" type="button" aria-pressed="false" title="Partileri renk körlüğünde de ayırt edilebilen renklerle gösterir">Renk körü dostu</button>
           <div class="search-wrap">
             <span class="search-icon">⌕</span>
             <input id="searchBox" type="text" placeholder="İl ara…" autocomplete="off">
@@ -372,6 +391,7 @@
             <div class="seq-ramp" id="seqRamp"></div>
             <span id="seqMax">100%</span>
           </div>
+          <div class="seq-note" id="seqNote" hidden></div>
         </div>
         <div class="winner-legend" id="winnerLegend"></div>
       </div>
@@ -380,7 +400,7 @@
         <div id="detailEmpty">Bir ile tıklayarak veya arayarak detayları görün.</div>
         <div id="detailBody" style="display:none">
           <div class="detail-title">
-            <h3 id="dName"></h3>
+            <h3 id="dName" aria-live="polite"></h3>
             <span class="plaka" id="dPlaka"></span>
           </div>
           <div class="detail-view-toggle" id="detailViewToggle" style="display:none">
@@ -419,6 +439,7 @@
       <div class="table-head-row">
         <div class="table-title" id="tableTitle">Türkiye · İl Sonuçları</div>
         <input id="tableSearch" type="text" placeholder="İl ara…" autocomplete="off">
+        <button class="link-btn" id="btnCsv" type="button" title="Bu seçimin il ve ilçe sonuçlarını CSV olarak indirir">CSV indir ↓</button>
       </div>
       <div class="table-scroll">
         <table class="data-table" id="ilTable">
@@ -452,11 +473,12 @@
   <footer>
     <div class="footer-brand">Türkiye Seçim Tarihi Atlası</div>
     <div class="footer-links">
-      <button class="link-btn" id="footerKaynaklar">Veri kaynakları · Metodoloji · Bilinen sorunlar</button>
+      <button class="link-btn" id="footerKaynaklar">Bu seçimin kaynakları</button>
+      · <a class="link-btn" href="yontem.html">Kaynaklar, yöntem ve bilinen eksikler</a>
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü 4be3d09293</div>
+    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü 979a40b784</div>
   </footer>
 </div>
 
@@ -488,7 +510,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = '4be3d09293';
+  const VERI_SURUMU = '979a40b784';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -525,23 +547,24 @@
     $('#results').setAttribute('aria-busy', String(busy));
   }
 
-  let BUNDLE, GEO, GEO_ILCE, GEO_ILCE_HIST, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS, HARITA_NOTLARI;
+  // Ilce sinirlari (GEO_ILCE, GEO_ILCE_HIST; ~1MB sikistirilmis) acilista indirilmez: ulke haritasi
+  // yalniz il sinirlari ve secim verisiyle cizilir, ilce sinirlari ardindan arka planda ya da
+  // ilk ile inildiginde yuklenir (ensureIlceGeo).
+  let BUNDLE, GEO, GEO_ILCE = null, GEO_ILCE_HIST = null, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS, HARITA_NOTLARI;
   setResultsBusy(true);
   // Keep initialization retryable without reloading the page or attaching handlers twice.
   while(!BUNDLE){
     showLoadStatus('Harita verileri yükleniyor…');
     try{
-      const [partiler, il, ilce, ilceHist, meclis, mahalleCoverage, districtSplits, haritaNotlari] = await Promise.all([
+      const [partiler, il, meclis, mahalleCoverage, districtSplits, haritaNotlari] = await Promise.all([
         fetchJSON("data/parties.json"),
         fetchJSON("geo/il_sinirlari.geojson"),
-        fetchJSON("geo/ilce_sinirlari.geojson"),
-        fetchJSON("geo/ilce_sinirlari_hist.geojson"),
         fetchJSON("geo/meclis_2024.json", {}),
         fetchJSON("geo/mahalle_coverage.json", {}),
         fetchJSON("geo/district_splits.json", {}),
         fetchJSON("geo/harita_notlari.json", {}),
       ]);
-      GEO = il; GEO_ILCE = ilce; GEO_ILCE_HIST = ilceHist;
+      GEO = il;
       MECLIS_2024 = meclis; MAHALLE_COVERAGE = mahalleCoverage; DISTRICT_SPLITS = districtSplits; HARITA_NOTLARI = haritaNotlari;
       BUNDLE = {partiler, secimler: {}};
     }catch(error){
@@ -551,8 +574,9 @@
       }));
     }
   }
-  function loadMahalleGeometry(){
-    return fetchJSON("geo/mahalle_geo.json");
+  // Mahalle poligonlari ilce basina ayri dosyada: yalniz inilen ilcenin poligonlari indirilir.
+  function loadMahalleGeometry(geomId){
+    return fetchJSON("geo/mahalle/"+encodeURIComponent(geomId)+".json");
   }
   async function fetchElection(year){
     if(!(year in BUNDLE.secimler)) BUNDLE.secimler[year] = await fetchJSON("data/elections/"+year+".json");
@@ -564,8 +588,25 @@
     return fetchJSON("data/mahalle_votes/"+year+".json", {});
   }
   const geoFeatureById = {};
-  for(const f of GEO_ILCE.features){ geoFeatureById[f.properties.id] = f; }
-  for(const f of GEO_ILCE_HIST.features){ geoFeatureById[f.properties.id] = f; }
+  let ilceGeoPromise = null;
+  function ensureIlceGeo(){
+    if(!ilceGeoPromise){
+      ilceGeoPromise = Promise.all([
+        fetchJSON("geo/ilce_sinirlari.geojson"),
+        fetchJSON("geo/ilce_sinirlari_hist.geojson"),
+      ]).then(([ilce, ilceHist]) => {
+        if(!GEO_ILCE){
+          for(const f of ilce.features){ geoFeatureById[f.properties.id] = f; }
+          for(const f of ilceHist.features){ geoFeatureById[f.properties.id] = f; }
+          GEO_ILCE = ilce; GEO_ILCE_HIST = ilceHist;
+        }
+      }).catch(error => {
+        ilceGeoPromise = null; // basarisiz istek yeniden denenebilmeli
+        throw error;
+      });
+    }
+    return ilceGeoPromise;
+  }
 
   // Ilcenin gosterilecegi poligon, o ilcenin BUGUNKU plaka koduna gore degil, o secim
   // yilinda DATA.ilceler'de kayitli gercek idari bagliliga (plaka) ve o kaydin geomId'sine
@@ -659,6 +700,7 @@
   let DATA, MAJOR, ilByPlaka, districtsByPlaka, districtByGeomId, currentYear;
 
   function partyColor(name){
+    if(renkKoruModu) return renkKoruRengi(name); // bkz. erisim.js
     const cur = document.documentElement.getAttribute('data-theme');
     const dark = cur === 'dark' || (cur !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
     const meta = PARTY[name] || PARTY['Diğer'];
@@ -1027,8 +1069,11 @@
     html += '<div class="drawer-section-title">Kaynak ve metodoloji</div>';
     html += '<p>Seçim sonuçları ağırlıklı olarak YSK ve diğer resmî kamu kaynaklarından derlenmiştir. Eksik tarihsel dönemlerde ikincil kaynaklardan yararlanılmıştır. Veriler yayın öncesinde normalize edilip doğrulama kontrollerinden geçirilir.</p>';
     html += '<p>Yurtdışı seçmen oyları hiçbir ile bağlı olmadığı için haritaya dahil edilmez, mevcut olduğu seçimlerde ayrı bir panelde gösterilir.</p>';
+    html += '<p><a class="link-btn" href="yontem.html" style="text-decoration:underline;">Kaynaklar ve yöntem sayfası →</a> (dönem sınırları, harita modları, bilinen eksikler)</p>';
     html += '<p>Bu bir kişisel veri derleme çalışmasıdır, resmî bir YSK yayını değildir. Kaynak kodu:<br><a class="link-btn" href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener" style="text-decoration:underline;">github.com/hamiKumbasae/turkiye-secim-atlasi</a></p>';
+    html += '<p><button class="link-btn" id="drawerCsv" type="button" style="text-decoration:underline;">Bu seçimin il ve ilçe sonuçlarını indir (CSV) ↓</button></p>';
     $('#drawerBody').innerHTML = html;
+    $('#drawerCsv').addEventListener('click', csvIndir);
   }
 
   function openDrawer(){
@@ -1133,10 +1178,12 @@
     currentMapParty = MAJOR[0] || null;
     sel.value = currentMapParty;
   }
-  function setMapMode(mode){
+  async function setMapMode(mode){
+    if(mode==='degisim' && !(await ensureOnceki())) return;
     currentMapMode = mode;
-    $$('#modeGroup button').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
+    $$('#modeGroup button').forEach(b=>{ b.classList.toggle('active', b.dataset.mode===mode); b.setAttribute('aria-pressed', String(b.dataset.mode===mode)); });
     applyMapMode(); // #partySelect gorunurlugu de burada, mode'a gore ayarlanir
+    durumuYaz();
   }
   // council_seats/mixed (1950/1955 yerel): oy oranlari ile sandalye paylari
   // AYNI renk skalasinda karsilastirilamaz (biri gercek oy yuzdesi, digeri
@@ -1148,6 +1195,8 @@
   function resetMapModeUI(){
     populatePartySelect();
     $('#modeGroup button[data-mode="parti"]').hidden = !partiModeAvailable();
+    ONCEKI = null;
+    $('#modeGroup button[data-mode="degisim"]').hidden = !partiModeAvailable() || !oncekiSecimAnahtari();
     setMapMode('winner');
   }
   $$('#modeGroup button').forEach(b=>{
@@ -1156,7 +1205,7 @@
     // yapmasin diye burada da korunur.
     b.addEventListener('click', ()=> { if(view.level!=='meclis-ilce') setMapMode(b.dataset.mode); });
   });
-  $('#partySelect').addEventListener('change', e=>{ if(view.level!=='meclis-ilce'){ currentMapParty = e.target.value; applyMapMode(); } });
+  $('#partySelect').addEventListener('change', e=>{ if(view.level!=='meclis-ilce'){ currentMapParty = e.target.value; applyMapMode(); durumuYaz(); } });
 
   // hex/renk stringini hue'ya cevirir (parti oran gradyani icin) - canvas
   // normalizasyonu kullanir, boylece partiler.json'daki her renk formati
@@ -1212,6 +1261,7 @@
     $('#mapTitleCountry').style.display='block';
     $('#searchBox').placeholder='İl ara…';
     applyMapMode();
+    durumuYaz();
   }
 
   async function mahalleDataForDistrict(geomId, year, oylama){
@@ -1219,9 +1269,8 @@
     const votesForYear = await loadMahalleVotesForYear(year);
     const voteRows = votesForYear[geomId];
     if(!voteRows || !Object.keys(voteRows).length) return null;
-    // Do not download the large geometry for a district without neighborhood votes.
-    const geometry = await loadMahalleGeometry();
-    const geoRows = geometry[geomId];
+    // Mahalle oyu olmayan ilce icin poligon dosyasi hic istenmez.
+    const geoRows = await loadMahalleGeometry(geomId);
     if(!geoRows) return null;
     const rows = [];
     for(const osmId in voteRows){
@@ -1386,6 +1435,8 @@
     $('#searchBox').value='';
     $('#searchBox').placeholder='İlçe ara…';
     applyMapMode();
+    seciliIlce = null;
+    durumuYaz();
   }
 
   function drillIntoProvince(plaka){
@@ -1397,8 +1448,27 @@
   // ilce verisi varsa normal ilce-haritasina in; yoksa harita ulke goruminde
   // kalir, sahte bir "ilce gorunumu"ne gecilmez, sag panelde ilin kendi
   // sonucu gosterilir.
-  function goToProvince(plaka){
+  // Ilce sinirlari henuz inmediyse once onlar beklenir (bkz. ensureIlceGeo); bu arada baska
+  // bir il ya da secim secilirse gec gelen sonuc gorunumu degistirmez.
+  let provinceLoadTicket = 0;
+  async function goToProvince(plaka){
+    const ticket = ++provinceLoadTicket;
     if(provinceHasDistrictData(plaka)){
+      if(!GEO_ILCE){
+        const yearTicket = loadYearTicket;
+        const stillCurrent = () => ticket === provinceLoadTicket && yearTicket === loadYearTicket;
+        showLoadStatus('İlçe sınırları yükleniyor…');
+        try{
+          await ensureIlceGeo();
+        }catch(error){
+          if(stillCurrent()) showLoadStatus('İlçe sınırları yüklenemedi. Bağlantınızı kontrol edip yeniden deneyin.', () => {
+            if(stillCurrent()) goToProvince(plaka);
+          });
+          return;
+        }
+        if(!stillCurrent()) return;
+        clearLoadStatus();
+      }
       drillIntoProvince(plaka);
     } else {
       if(view.level!=='country') renderCountryMap();
@@ -1441,6 +1511,7 @@
     $('#searchBox').value='';
     $('#searchBox').placeholder='Mahalle ara…';
     applyMapMode();
+    durumuYaz();
   }
 
   // ---------------- map coloring modes ----------------
@@ -1459,8 +1530,9 @@
     // kontrolleri kendisi gizler (bkz. renderMeclisIlceMap), buraya her
     // gelinişte tekrar gorunur yapilir.
     $('#modeGroup').style.display='';
-    $('#partySelect').style.display = mode==='parti' ? '' : 'none';
+    $('#partySelect').style.display = (mode==='parti' || mode==='degisim') ? '' : 'none';
     $('#seqLegendWrap').style.display = (mode==='winner') ? 'none' : 'flex';
+    $('#seqNote').hidden = mode!=='degisim';
     const entities = view.level==='country' ? DATA.iller : (view.level==='mahalle' ? currentMahalleRows : (districtsByPlaka[view.plaka]||[]));
     const pathFor = view.level==='country' ? (e=>pathByPlaka[e.plaka])
       : (view.level==='mahalle' ? (e=>pathByMahalleId[e.id]) : (e=>e.geomId && pathByGeomId[e.geomId]));
@@ -1480,6 +1552,7 @@
       return;
     }
     $('#winnerLegend').innerHTML='';
+    if(mode==='degisim'){ applyDegisim(entities, pathFor); return; }
     let key, hue;
     if(mode==='parti'){ key = currentMapParty; hue = key ? colorToHue(partyColor(key)) : 210; }
     else { key=null; hue=210; }
@@ -1503,6 +1576,89 @@
     }
   }
 
+  // ---------------- degisim: onceki secime gore oy orani farki ----------------
+  // Ayni turdeki bir onceki secim (TUR_YEARS yeniden eskiye sirali). Il duzeyinde ayni plaka,
+  // ilce duzeyinde ayni poligon (geomId; tarihsel birlesimler kendi kimligini tasir, yani sinir
+  // degistiyse eslesmez) karsilastirilir.
+  let ONCEKI = null; // {year, data, ilByPlaka, ilceByGeomId}
+  let oncekiTicket = 0;
+  function oncekiSecimAnahtari(){
+    const order = TUR_YEARS[currentTur] || [];
+    const i = order.indexOf(currentYear);
+    return i >= 0 && i + 1 < order.length ? order[i + 1] : null;
+  }
+  // true: ONCEKI hazir; false: onceki secim yok, yuklenemedi ya da bu arada secim degisti
+  async function ensureOnceki(){
+    const year = oncekiSecimAnahtari();
+    if(!year) return false;
+    const oylama = DATA.oylama || 'baskan';
+    if(ONCEKI && ONCEKI.year === year && ONCEKI.oylama === oylama) return true;
+    const ticket = ++oncekiTicket, yearTicket = loadYearTicket;
+    const stillCurrent = () => ticket === oncekiTicket && yearTicket === loadYearTicket;
+    showLoadStatus('Önceki seçim yükleniyor…');
+    try{
+      const kayit = await oylamaKaydi(year, await fetchElection(year), oylama);
+      if(!stillCurrent()) return false;
+      const ilceByGeomId = {};
+      for(const d of kayit.ilceler || []){ if(d.geomId) ilceByGeomId[d.geomId] = d; }
+      ONCEKI = {year, oylama: kayit.oylama || 'baskan', data: kayit, ilceByGeomId,
+                ilByPlaka: Object.fromEntries(kayit.iller.map(p => [p.plaka, p]))};
+      clearLoadStatus();
+      return true;
+    }catch(error){
+      if(stillCurrent()) showLoadStatus('Önceki seçim yüklenemedi.', () => setMapMode('degisim'));
+      return false;
+    }
+  }
+  function oncekiKarsiligi(e){
+    if(!ONCEKI) return null;
+    if(view.level === 'country') return ONCEKI.ilByPlaka[e.plaka] || null;
+    if(view.level === 'province') return (e.geomId && ONCEKI.ilceByGeomId[e.geomId]) || null;
+    return null; // mahalle duzeyinde karsilastirma yok
+  }
+  // yuzde puan farki; parti ya da yer onceki secimde yoksa null
+  function degisimDegeri(e, key){
+    const o = oncekiKarsiligi(e);
+    if(!o || !o.oy || !e.oy) return null;
+    const a = resultPercent(e.oy[key]), b = resultPercent(o.oy[key]);
+    return a == null || b == null ? null : a - b;
+  }
+  function divColor(t, hueArti, hueEksi){
+    // t in [-1,1]: eksi taraf zit renk, arti taraf parti rengi, 0 acik notr
+    const dark = document.documentElement.getAttribute('data-theme')==='dark' ||
+      (document.documentElement.getAttribute('data-theme')!=='light' && matchMedia('(prefers-color-scheme: dark)').matches);
+    const m = Math.min(1, Math.abs(t));
+    const l = dark ? (30 + (1 - m) * 40) : (94 - m * 54);
+    return 'hsl(' + (t < 0 ? hueEksi : hueArti) + ' ' + Math.round(m * 65) + '% ' + l + '%)';
+  }
+  function puan(v){ return (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toFixed(1).replace('.', ',') + ' puan'; }
+  function applyDegisim(entities, pathFor){
+    const key = currentMapParty;
+    const hue = key ? colorToHue(partyColor(key)) : 210, hueEksi = (hue + 180) % 360;
+    const vals = new Map();
+    for(const e of entities){ const v = key ? degisimDegeri(e, key) : null; if(v != null) vals.set(e, v); }
+    const m = Math.max(1, ...[...vals.values()].map(Math.abs));
+    $('#seqMin').textContent = '−' + m.toFixed(1).replace('.', ',');
+    $('#seqMax').textContent = '+' + m.toFixed(1).replace('.', ',');
+    $('#seqRamp').style.background = 'linear-gradient(90deg,' + divColor(-1, hue, hueEksi) + ',' + divColor(0, hue, hueEksi) + ',' + divColor(1, hue, hueEksi) + ')';
+    for(const e of entities){
+      const el = pathFor(e); if(!el) continue;
+      el.setAttribute('fill', vals.has(e) ? divColor(vals.get(e) / m, hue, hueEksi) : 'var(--map-empty)');
+    }
+    if(view.level==='province'){
+      for(const [gid, el] of Object.entries(pathByGeomId)){
+        if(!districtByGeomId[gid]) el.setAttribute('fill', bosDolgu(gid));
+      }
+    }
+    const once = ONCEKI ? TUR_LABELS[currentTur][ONCEKI.year] : '';
+    let not = escapeHtml(partyShort(key || '')) + ': ' + escapeHtml(once) + ' → ' + escapeHtml(TUR_LABELS[currentTur][currentYear]) + ' oy oranı farkı (yüzde puan).';
+    if(view.level === 'mahalle') not = 'Mahalle düzeyinde önceki seçimle karşılaştırma yok.';
+    else if(!vals.size) not += ' Bu parti önceki seçimde yoktu ya da sonuçları eşleşmiyor.';
+    else if(view.level === 'country' && eraSuffixForYear(ONCEKI.year) !== eraSuffixForYear(currentYear))
+      not += ' İki seçim arasında il sınırları değişti; yeni kurulan illerin ayrıldığı illerde fark kısmen sınır değişikliğindendir.';
+    else if(view.level === 'province') not += ' Sınırı değişen ilçeler (gri) karşılaştırılmaz.';
+    $('#seqNote').innerHTML = not;
+  }
 
   // ---------------- tooltip ----------------
   const tip = $('#tooltip');
@@ -1537,6 +1693,12 @@
       const key = currentMapParty;
       const o = obj.oy[key];
       html += '<div class="row"><span>'+escapeHtml(partyShort(key))+'</span><span>'+resultPercentLabel(o)+(o?' · '+resultQuantity(o):'')+'</span></div>';
+    } else if(mode==='degisim'){
+      const key = currentMapParty;
+      const o = oncekiKarsiligi(obj), v = degisimDegeri(obj, key);
+      html += '<div class="row"><span>'+escapeHtml(partyShort(key))+'</span><span>'+resultPercentLabel(obj.oy[key])+'</span></div>';
+      if(ONCEKI) html += '<div class="row"><span>'+escapeHtml(TUR_LABELS[currentTur][ONCEKI.year])+'</span><span>'+(o && o.oy ? resultPercentLabel(o.oy[key]) : '—')+'</span></div>';
+      html += '<div class="row"><span>Değişim</span><span>'+(v==null ? 'karşılaştırılamıyor' : puan(v))+'</span></div>';
     } else {
       html += '<div class="row"><span>Katılım</span><span>'+(obj.katilim!=null?'%'+obj.katilim.toFixed(2):'—')+'</span></div>';
     }
@@ -1568,8 +1730,10 @@
     return h;
   }
   function positionTip(e){
-    tip.style.left = e.clientX+'px';
-    tip.style.top = (e.clientY-10)+'px';
+    // kutu imlecin ustunde ortalanir (translate -50%,-100%); dar ekranda kenardan tasmasin
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.min(Math.max(e.clientX, w/2 + 8), innerWidth - w/2 - 8)+'px';
+    tip.style.top = Math.max(e.clientY - 10, h + 8)+'px';
     tip.style.opacity = 1;
   }
   function hideTooltip(){ tip.style.opacity=0; }
@@ -1621,6 +1785,8 @@
 
   function selectProvince(plaka){
     selectedPlaka = plaka;
+    seciliIlce = null;
+    durumuYaz();
     detailView = 'baskanlik';
     $$('.geo-path').forEach(p=>p.classList.toggle('selected', +p.dataset.plaka===plaka));
     const p = ilByPlaka[plaka]; if(!p) return;
@@ -1799,6 +1965,8 @@
   }
 
   function selectDistrict(d, plaka){
+    seciliIlce = d.geomId || null;
+    durumuYaz();
     $$('.geo-path').forEach(p=>p.classList.toggle('selected', p.dataset.geomId===d.geomId));
     $$('.district-row').forEach(r=>r.classList.toggle('dselected', r.dataset.geomId===d.geomId));
     const p = ilByPlaka[plaka];
@@ -2065,6 +2233,207 @@
   }
 
 
+  // ---------------- CSV indirme ----------------
+  // Acik secimin il ve ilce sonuclari tek tabloda: her parti icin oy, oran (%) ve varsa vekil /
+  // meclis sandalyesi. UTF-8 BOM'lu, virgulle ayrilmis (Excel'de Turkce karakterler bozulmasin).
+  function csvHucre(v){
+    if(v == null) return '';
+    const s = String(v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function csvMetni(){
+    const satirlar = [
+      ...DATA.iller.map(r => ['il', r]),
+      ...(DATA.ilceler || []).filter(r => r.oy && Object.keys(r.oy).length || r.not).map(r => ['ilçe', r]),
+    ];
+    if(hasYurtdisiData()) satirlar.push(['yurt dışı', Object.assign({ad: 'Yurt dışı'}, DATA.yurtdisi)]);
+    const partiler = [...MAJOR];
+    for(const [, r] of satirlar) for(const p of Object.keys(r.oy || {})) if(!partiler.includes(p)) partiler.push(p);
+    const vekilVar = satirlar.some(([, r]) => r.vekil && Object.keys(r.vekil).length);
+    const sandalyeVar = satirlar.some(([, r]) => Object.values(r.oy || {}).some(isSeatBased));
+    const bas = ['seçim', 'düzey', 'plaka', 'il', 'ilçe', 'seçmen', 'sandık', 'geçerli oy', 'katılım %', 'kazanan'];
+    if(vekilVar) bas.push('toplam vekil');
+    for(const p of partiler){
+      bas.push(p + ' oy', p + ' %');
+      if(vekilVar) bas.push(p + ' vekil');
+      if(sandalyeVar) bas.push(p + ' sandalye');
+    }
+    bas.push('not');
+    const ad = csvAnahtari();
+    const out = [bas];
+    for(const [duzey, r] of satirlar){
+      const il = duzey === 'il' ? r.ad : (duzey === 'ilçe' ? (ilByPlaka[r.plaka] || {}).ad : '');
+      const row = [ad, duzey, duzey === 'yurt dışı' ? '' : r.plaka, il, duzey === 'ilçe' ? r.ad : '',
+                   r.secmen, r.sandik, r.gecerliOy, r.katilim, r.kazanan];
+      if(vekilVar) row.push(r.toplamVekil);
+      for(const p of partiler){
+        const o = (r.oy || {})[p];
+        row.push(o ? o.oy : null, o ? (isSeatBased(o) ? null : o.oran) : null);
+        if(vekilVar) row.push((r.vekil || {})[p]);
+        if(sandalyeVar) row.push(o ? o.sandalye : null);
+      }
+      row.push(r.not);
+      out.push(row);
+    }
+    return '﻿' + out.map(r => r.map(csvHucre).join(',')).join('\r\n') + '\r\n';
+  }
+  // secim anahtari (ornek 2023, 2019yerel_bm): dosya adi ve 'seçim' sutunu
+  function csvAnahtari(){
+    return currentYear + (DATA.oylama && DATA.oylama !== 'baskan' ? '_' + DATA.oylama : '');
+  }
+  function csvIndir(){
+    const blob = new Blob([csvMetni()], {type: 'text/csv;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'secim_' + csvAnahtari() + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  $('#btnCsv').addEventListener('click', csvIndir);
+
+  // ---------------- paylasilabilir baglanti ----------------
+  // Gorunum adres cubugundaki # kisminda tutulur: #secim=1977&il=6&ilce=TR-D-06-001&mod=parti&parti=CHP
+  // (yerel secimde &oylama=igm|bm). Bu baglantiyla acilan sayfa ayni gorunume gider. Adres
+  // replaceState ile guncellenir (her tiklama tarayici gecmisine eklenmez).
+  const MODLAR = ['winner', 'katilim', 'parti', 'degisim'];
+  let baglantiUygulaniyor = false;
+  let seciliIlce = null; // panelde secili ilce (geomId); selectDistrict ayarlar
+
+  function durumParametreleri(){
+    const q = new URLSearchParams();
+    if(!currentYear) return q;
+    q.set('secim', currentYear);
+    if(currentTur === 'yerel' && currentOylama && currentOylama !== 'baskan') q.set('oylama', currentOylama);
+    const il = view.level === 'country' ? selectedPlaka : view.plaka;
+    if(il) q.set('il', il);
+    const ilce = view.level === 'mahalle' || view.level === 'meclis-ilce' ? view.geomId : (view.level === 'province' ? seciliIlce : null);
+    if(il && ilce) q.set('ilce', ilce);
+    if(currentMapMode && currentMapMode !== 'winner'){
+      q.set('mod', currentMapMode);
+      if((currentMapMode === 'parti' || currentMapMode === 'degisim') && currentMapParty) q.set('parti', currentMapParty);
+    }
+    return q;
+  }
+  function durumuYaz(){
+    if(baglantiUygulaniyor || !currentYear) return;
+    const hash = '#' + durumParametreleri().toString();
+    if(location.hash !== hash) history.replaceState(null, '', hash);
+  }
+
+  // Acilista (ve adres elle degistirildiginde) baglantidaki gorunume gider; gecersiz ya da eksik
+  // parametreler yok sayilir.
+  async function baglantiyiUygula(){
+    const q = new URLSearchParams(location.hash.slice(1));
+    const secim = q.get('secim');
+    const tur = secim && Object.keys(TUR_YEARS).find(t => TUR_YEARS[t].includes(secim));
+    baglantiUygulaniyor = true;
+    try{
+      if(!tur){ await switchTur('genel'); return; }
+      const oylama = q.get('oylama');
+      currentOylama = ['igm', 'bm'].includes(oylama) ? oylama : 'baskan';
+      await switchTur(tur, secim);
+      if(currentYear !== secim) return; // yuklenemedi ya da bu arada baska secim secildi
+      const parti = q.get('parti');
+      if(parti && MAJOR.includes(parti)){ currentMapParty = parti; $('#partySelect').value = parti; }
+      const mod = q.get('mod');
+      const dugme = MODLAR.includes(mod) && $('#modeGroup button[data-mode="' + mod + '"]');
+      if(dugme && !dugme.hidden && mod !== 'winner') await setMapMode(mod);
+      const il = parseInt(q.get('il'), 10);
+      if(il && ilByPlaka[il]){
+        await goToProvince(il);
+        const ilce = q.get('ilce');
+        if(ilce && view.level === 'province' && districtByGeomId[ilce]) await openDistrict(il, ilce);
+      }
+    }finally{
+      baglantiUygulaniyor = false;
+      durumuYaz();
+    }
+  }
+  window.addEventListener('hashchange', () => {
+    if(!baglantiUygulaniyor && location.hash !== '#' + durumParametreleri().toString()) baglantiyiUygula();
+  });
+
+  $('#btnPaylas').addEventListener('click', async () => {
+    durumuYaz();
+    const btn = $('#btnPaylas');
+    try{
+      await navigator.clipboard.writeText(location.href);
+      btn.textContent = 'Bağlantı kopyalandı ✓';
+    }catch(error){
+      window.prompt('Bu görünümün bağlantısı:', location.href);
+    }
+    setTimeout(() => { btn.textContent = 'Bağlantıyı kopyala'; }, 2000);
+  });
+
+  // ---------------- erisilebilirlik ----------------
+  // 1) Renk korlugu dostu palet (Okabe-Ito): acik secimdeki partiler siralarina (MAJOR) gore 7 ayirt
+  //    edilebilir renk alir, kalanlar gri. partyColor bunu kullanir; tercih tarayicida saklanir.
+  // 2) Klavye ve ekran okuyucu: harita bolgeleri Tab ile gezilir, Enter/Bosluk ile acilir, odakta
+  //    ipucu kutusu gosterilir; her bolgenin "Adana: AK Parti önde" gibi bir etiketi vardir.
+  // 3) Dokunmatik ekran: haritanin disina dokununca ya da kaydirinca ipucu kutusu kapanir.
+  const RENK_KORU_PALET = ['#E69F00', '#0072B2', '#009E73', '#D55E00', '#56B4E9', '#CC79A7', '#F0E442'];
+  let renkKoruModu = false;
+  try{ renkKoruModu = localStorage.getItem('renkKoruModu') === '1'; }catch(error){ /* depolama kapali */ }
+  function renkKoruRengi(name){
+    const i = MAJOR ? MAJOR.indexOf(name) : -1;
+    return i >= 0 && i < RENK_KORU_PALET.length ? RENK_KORU_PALET[i] : '#9a9a9a';
+  }
+  function renkKoruDugmesi(){
+    const b = $('#btnRenkKoru');
+    b.classList.toggle('active', renkKoruModu);
+    b.setAttribute('aria-pressed', String(renkKoruModu));
+  }
+  renkKoruDugmesi();
+  $('#btnRenkKoru').addEventListener('click', () => {
+    renkKoruModu = !renkKoruModu;
+    try{ localStorage.setItem('renkKoruModu', renkKoruModu ? '1' : '0'); }catch(error){ /* depolama kapali */ }
+    renkKoruDugmesi();
+    if(!DATA) return;
+    applyMapMode(); renderSeatBar(); renderTable();
+    if(selectedPlaka && view.level === 'country') selectProvince(selectedPlaka);
+  });
+
+  const haritaSvg = $('#mapSvg');
+  function bolgeKaydi(el){
+    if(el.dataset.mahalleId) return currentMahalleRows.find(r => r.id === el.dataset.mahalleId);
+    if(el.dataset.geomId) return districtByGeomId[el.dataset.geomId];
+    if(el.dataset.plaka) return ilByPlaka[+el.dataset.plaka];
+    return null;
+  }
+  function haritayiErisilebilirYap(){
+    if(!DATA) return;
+    const baslik = view.level === 'country' ? 'Türkiye haritası, illere göre sonuç'
+      : (ilByPlaka[view.plaka] ? ilByPlaka[view.plaka].ad : '') + (view.level === 'mahalle' ? ' mahalle haritası' : ' ilçe haritası');
+    haritaSvg.setAttribute('role', 'group');
+    haritaSvg.setAttribute('aria-label', baslik + '. Bölgeler arasında Tab ile gezinip Enter ile açabilirsiniz.');
+    for(const el of haritaSvg.querySelectorAll('path')){
+      const r = bolgeKaydi(el);
+      if(!r || el.classList.contains('geo-path-nodata')) continue;
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'button');
+      el.setAttribute('aria-label', r.ad + (r.kazanan ? ': ' + partyShort(r.kazanan) + ' önde' : ''));
+      if(el.dataset.klavye) continue;
+      el.dataset.klavye = '1';
+      el.addEventListener('keydown', e => {
+        if(e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        el.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+      });
+      el.addEventListener('focus', () => {
+        const b = el.getBoundingClientRect();
+        el.dispatchEvent(new MouseEvent('mousemove', {clientX: b.left + b.width / 2, clientY: b.top + b.height / 2}));
+      });
+      el.addEventListener('blur', hideTooltip);
+    }
+  }
+  // her cizimden sonra (ulke, il, mahalle; yil ya da mod degisikligi) etiketler yenilenir
+  new MutationObserver(() => requestAnimationFrame(haritayiErisilebilirYap)).observe(haritaSvg, {childList: true});
+
+  document.addEventListener('touchstart', e => {
+    if(!(e.target.closest && e.target.closest('#mapSvg'))) hideTooltip();
+  }, {passive: true});
+  window.addEventListener('scroll', hideTooltip, {passive: true});
+
   // ---------------- theme change redraw ----------------
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
     if(!DATA) return;
@@ -2091,14 +2460,14 @@
     if(active) active.scrollIntoView({inline:'center', block:'nearest'});
   }
 
-  function switchTur(tur){
+  function switchTur(tur, year){
     currentTur = tur;
     $('#btnTurGenel').classList.toggle('active', tur==='genel');
     $('#btnTurReferandum').classList.toggle('active', tur==='referandum');
     $('#btnTurYerel').classList.toggle('active', tur==='yerel');
     $('#btnTurCB').classList.toggle('active', tur==='cumhurbaskanligi');
     renderYearPicker();
-    loadYear(TUR_YEARS[tur][0]);
+    return loadYear(year || TUR_YEARS[tur][0]);
   }
 
   // Fetch async oldugu icin hizli art arda yil degistirmede eski istek gec
@@ -2156,6 +2525,9 @@
       renderTable();
       setResultsBusy(false);
       clearLoadStatus();
+      // ilk ile inmeden once ilce sinirlarini arka planda indir (hata olursa ile inerken yeniden denenir)
+      setTimeout(() => ensureIlceGeo().catch(() => {}), 0);
+      durumuYaz();
     }catch(error){
       if(ticket !== loadYearTicket) return;
       // Keep old results inert: they must not be mistaken for the requested election.
@@ -2168,7 +2540,7 @@
   $('#btnTurYerel').addEventListener('click', ()=> switchTur('yerel'));
   $('#btnTurCB').addEventListener('click', ()=> switchTur('cumhurbaskanligi'));
 
-  switchTur('genel');
+  baglantiyiUygula(); // adresteki #secim=... gorunumu, yoksa son genel secim
 
 })();
 </script>

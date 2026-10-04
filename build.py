@@ -29,7 +29,7 @@ JS_PLACEHOLDER = "//__BUILD_WILL_INSERT_JS__"
 JS_FILES = [
     "data-loader.js", "election-config.js", "state.js", "result-utils.js", "seatbar.js",
     "summary.js", "map.js", "tooltip.js", "detail-panel.js", "search.js", "nav.js",
-    "table.js", "app.js",
+    "table.js", "link.js", "erisim.js", "app.js",
 ]
 
 
