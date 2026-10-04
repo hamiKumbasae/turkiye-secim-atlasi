@@ -162,6 +162,7 @@
   /* o secimde henuz ayri ilce olmayan alan (geo/harita_notlari.json) */
   .geo-path-gecis{opacity:.85;}
   #tooltip .tip-not span{font-size:11px; opacity:.8; white-space:normal;}
+  #tooltip .tip-uyari span{opacity:1; font-weight:600;}
   #hatchGecis rect{fill:var(--map-empty);}
   #hatchGecis line{stroke:var(--map-hatch); stroke-width:2;}
 

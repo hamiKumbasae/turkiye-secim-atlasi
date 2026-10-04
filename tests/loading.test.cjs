@@ -330,3 +330,20 @@ test('a late change comparison cannot override a newer winner-mode selection', a
  await page.locator('#modeGroup [data-mode="winner"]').click();release();await tick(page);await tick(page);
  assert.equal(await page.locator('#modeGroup button.active').getAttribute('data-mode'),'winner');
 });
+
+test('records that do not match their source carry a visible warning', async t => {
+  const {page} = await setup(t);
+  await page.goto('about:blank');
+  await page.goto('http://atlas.test/#secim=1961&il=6');
+  await ready(page);
+  const cubuk = page.locator('#mapSvg path[data-geom-id="HIST1961-06-Cubuk"]');
+  await cubuk.waitFor();
+  await cubuk.hover();
+  assert.match(await page.locator('#tooltip .tip-uyari').textContent(), /⚠ Kaynakla tam tutmuyor/);
+  await cubuk.click();
+  assert.match(await page.locator('#dInfoNote').textContent(), /Kaynakla tam tutmuyor/);
+  // a record whose votes add up shows no warning
+  await page.goto('about:blank'); await page.goto('http://atlas.test/#secim=2023&il=6'); await ready(page);
+  await page.locator('#mapSvg path[data-geom-id]').first().hover();
+  assert.doesNotMatch(await page.locator('#tooltip').textContent(), /Kaynakla tam tutmuyor/);
+});

@@ -172,6 +172,7 @@
   /* o secimde henuz ayri ilce olmayan alan (geo/harita_notlari.json) */
   .geo-path-gecis{opacity:.85;}
   #tooltip .tip-not span{font-size:11px; opacity:.8; white-space:normal;}
+  #tooltip .tip-uyari span{opacity:1; font-weight:600;}
   #hatchGecis rect{fill:var(--map-empty);}
   #hatchGecis line{stroke:var(--map-hatch); stroke-width:2;}
 
@@ -478,7 +479,7 @@
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü 20f3e7c6d0</div>
+    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü 38ab37254c</div>
   </footer>
 </div>
 
@@ -510,7 +511,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = '20f3e7c6d0';
+  const VERI_SURUMU = '38ab37254c';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -799,6 +800,11 @@
     return !!(DATA.yurtdisi && DATA.yurtdisi.oy && Object.keys(DATA.yurtdisi.oy).length);
   }
 
+  // Kayit kaynakla dogrulanamadi mi (prepareElection'in isaretleri: oy toplami, yuzde, cift eslesme,
+  // gecerli oy > secmen)? Ipucu kutusu ve detay paneli bunu kisa bir uyariyla gosterir.
+  function kaynaklaTutmuyor(r){
+    return !!r && (!!r.yuzdeDogrulanmadi || !!(r.secmen && r.gecerliOy > r.secmen));
+  }
 
   // ---------------- national seat bar (genel secim) / evet-hayir bar (referandum) ----------------
   function renderSeatBar(){
@@ -1788,6 +1794,7 @@
     } else {
       html += '<div class="row"><span>Katılım</span><span>'+(obj.katilim!=null?'%'+obj.katilim.toFixed(2):'—')+'</span></div>';
     }
+    if(kaynaklaTutmuyor(obj)) html += '<div class="row tip-not tip-uyari"><span>⚠ Kaynakla tam tutmuyor</span></div>';
     if(obj.veriNotu) html += '<div class="row tip-not"><span>'+escapeHtml(obj.veriNotu)+'</span></div>';
     if(sandikVal!=null) html += '<div class="row"><span>Sandık</span><span>'+fmt(sandikVal)+'</span></div>';
     if(DATA.tur==='yerel' && DATA.contestType!=='municipal_indirect'){
@@ -1913,7 +1920,7 @@
     }
 
     const note = [p.not, p.veriNotu, p.duzeltmeKaynagi && p.duzeltmeKaynagi.aciklama].filter(Boolean).join(' ');
-    if(note){ $('#dInfoNote').style.display = 'flex'; $('#dInfoNote').textContent = 'ⓘ ' + note; }
+    if(note){ $('#dInfoNote').style.display = 'flex'; $('#dInfoNote').textContent = (kaynaklaTutmuyor(p) ? '⚠ Kaynakla tam tutmuyor. ' : 'ⓘ ') + note; }
     $('#dSeatsLabel').textContent = (DATA.tur !== 'genel' || YEARS_NO_VEKIL.has(currentYear)) ? 'Vekil / Sandalye' : 'Milletvekili';
     $('#dSeats').textContent = (DATA.tur !== 'genel' || YEARS_NO_VEKIL.has(currentYear)) ? (p.toplamVekil || '—') : p.toplamVekil;
     $('#dTurnout').textContent = p.katilim!=null ? '%'+p.katilim.toFixed(2) : '—';
@@ -2063,7 +2070,7 @@
     $('#detailViewToggle').style.display='none';
     $('#dInfoNote').style.display='none';
     const note = [d.not, d.veriNotu, d.duzeltmeKaynagi && d.duzeltmeKaynagi.aciklama].filter(Boolean).join(' ');
-    if(note){ $('#dInfoNote').style.display='flex'; $('#dInfoNote').textContent='ⓘ '+note; }
+    if(note){ $('#dInfoNote').style.display='flex'; $('#dInfoNote').textContent=(kaynaklaTutmuyor(d) ? '⚠ Kaynakla tam tutmuyor. ' : 'ⓘ ')+note; }
     $('#dName').textContent = d.ad;
     $('#dPlaka').textContent = p ? p.ad : '';
 
