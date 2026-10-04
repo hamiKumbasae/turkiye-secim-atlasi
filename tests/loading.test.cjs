@@ -91,7 +91,8 @@ test('late historical geometry cannot overwrite the selected modern year', async
 test('two years in the same era share an in-flight geometry request safely', async t => {
   let release, attempts = 0;
   const {page} = await setup(t, async (name, route, serve) => {
-    if(name === 'geo/eras/era1957_1987.geojson'){
+    // 1961 ve 1965 ayni il donemi (era1957_1965: Kaynarca Kocaeli'de)
+    if(name === 'geo/eras/era1957_1965.geojson'){
       attempts++; await new Promise(resolve => { release = resolve; }); await serve(); return true;
     }
   });
