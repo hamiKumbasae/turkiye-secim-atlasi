@@ -299,6 +299,7 @@
       <span class="brand-sub">1950–2024 Türkiye seçim sonuçları ve tarihsel seçim coğrafyası</span>
     </div>
     <nav class="brand-links">
+      <a href="yontem.html">Kaynaklar ve yöntem</a>
       <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub ↗</a>
     </nav>
   </header>
@@ -457,11 +458,12 @@
   <footer>
     <div class="footer-brand">Türkiye Seçim Tarihi Atlası</div>
     <div class="footer-links">
-      <button class="link-btn" id="footerKaynaklar">Veri kaynakları · Metodoloji · Bilinen sorunlar</button>
+      <button class="link-btn" id="footerKaynaklar">Bu seçimin kaynakları</button>
+      · <a class="link-btn" href="yontem.html">Kaynaklar, yöntem ve bilinen eksikler</a>
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü 4c43ed6a05</div>
+    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü f2bb2dbe15</div>
   </footer>
 </div>
 
@@ -493,7 +495,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = '4c43ed6a05';
+  const VERI_SURUMU = 'f2bb2dbe15';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -1051,6 +1053,7 @@
     html += '<div class="drawer-section-title">Kaynak ve metodoloji</div>';
     html += '<p>Seçim sonuçları ağırlıklı olarak YSK ve diğer resmî kamu kaynaklarından derlenmiştir. Eksik tarihsel dönemlerde ikincil kaynaklardan yararlanılmıştır. Veriler yayın öncesinde normalize edilip doğrulama kontrollerinden geçirilir.</p>';
     html += '<p>Yurtdışı seçmen oyları hiçbir ile bağlı olmadığı için haritaya dahil edilmez, mevcut olduğu seçimlerde ayrı bir panelde gösterilir.</p>';
+    html += '<p><a class="link-btn" href="yontem.html" style="text-decoration:underline;">Kaynaklar ve yöntem sayfası →</a> (dönem sınırları, harita modları, bilinen eksikler)</p>';
     html += '<p>Bu bir kişisel veri derleme çalışmasıdır, resmî bir YSK yayını değildir. Kaynak kodu:<br><a class="link-btn" href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener" style="text-decoration:underline;">github.com/hamiKumbasae/turkiye-secim-atlasi</a></p>';
     $('#drawerBody').innerHTML = html;
   }
