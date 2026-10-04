@@ -90,7 +90,9 @@ Resmî YSK yayını değildir. Kaynak ayrıntıları ve metodoloji için sitedek
 
 ## Lisans
 
-MIT — bkz. [LICENSE](LICENSE).
+- **Kod:** MIT — bkz. [LICENSE](LICENSE).
+- **Veri** (`data/`, `geo/`): CC BY-SA 4.0; OpenStreetMap'ten türetilen mahalle sınırları ODbL
+  (© OpenStreetMap katkıcıları) — bkz. [LICENSE-DATA.md](LICENSE-DATA.md).
 
 ## Yükleme ve hata durumları
 
