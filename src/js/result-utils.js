@@ -55,3 +55,8 @@
     return !!(DATA.yurtdisi && DATA.yurtdisi.oy && Object.keys(DATA.yurtdisi.oy).length);
   }
 
+  // Kayit kaynakla dogrulanamadi mi (prepareElection'in isaretleri: oy toplami, yuzde, cift eslesme,
+  // gecerli oy > secmen)? Ipucu kutusu ve detay paneli bunu kisa bir uyariyla gosterir.
+  function kaynaklaTutmuyor(r){
+    return !!r && (!!r.yuzdeDogrulanmadi || !!(r.secmen && r.gecerliOy > r.secmen));
+  }

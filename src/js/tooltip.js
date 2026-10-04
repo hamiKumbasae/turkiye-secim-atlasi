@@ -45,6 +45,7 @@
     } else {
       html += '<div class="row"><span>Katılım</span><span>'+(obj.katilim!=null?'%'+obj.katilim.toFixed(2):'—')+'</span></div>';
     }
+    if(kaynaklaTutmuyor(obj)) html += '<div class="row tip-not tip-uyari"><span>⚠ Kaynakla tam tutmuyor</span></div>';
     if(obj.veriNotu) html += '<div class="row tip-not"><span>'+escapeHtml(obj.veriNotu)+'</span></div>';
     if(sandikVal!=null) html += '<div class="row"><span>Sandık</span><span>'+fmt(sandikVal)+'</span></div>';
     if(DATA.tur==='yerel' && DATA.contestType!=='municipal_indirect'){

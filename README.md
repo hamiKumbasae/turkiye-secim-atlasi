@@ -12,6 +12,15 @@ tarihsel sınır araştırmaları ayrı kaynak depoda tutulur. Bu ayrımın
 amacı: bu repoyu açan birinin sadece siteyi çalıştıran kodu görmesi, veri
 üretiminin iç detaylarını değil.
 
+## Tek ön yüz
+
+Sitenin ön yüzü (HTML/CSS/JS, `yontem.html`) **yalnız bu repoda** geliştirilir. Veri reposu
+[`turkiye-secim-haritasi`](https://github.com/hamiKumbasae/turkiye-secim-haritasi) bu ön yüzü
+`scripts/frontend_sync.py` ile kendi `frontend/` klasörüne kopyalar ve veriyi gömerek çift tıklayınca
+açılan tek dosyalık `index.html` üretir. Veri yükleyici (`src/js/data-loader.js`) sayfada gömülü veri
+(`window.__EMBEDDED_GZ__`) varsa onu, yoksa `data/` ve `geo/` dosyalarını `fetch()` ile okur; şablondaki
+`<!--__GOMULU_VERI__-->` gömülü verinin yeridir (bu repodaki `build.py` onu siler).
+
 ## Yerelde çalıştırma
 
 Veri artık `index.html`'e gömülü değil, ayrı statik dosyalar olarak
