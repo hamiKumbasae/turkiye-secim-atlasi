@@ -70,6 +70,18 @@ index.html (repo kökü)      build.py'nin çıktısı, commit'lenir.
 `scripts/export_static.py` ile üretilir ve buraya kopyalanır — güncelleme
 akışı için o deponun README'sine bakın.
 
+## Site özellikleri
+
+- **Harita modları:** Kazanan, Katılım, Parti (oy oranı) ve **Değişim** (seçilen partinin aynı
+  türdeki önceki seçime göre oy oranı farkı, yüzde puan; sınırı değişen ilçe karşılaştırılmaz).
+- **Paylaşılabilir bağlantı:** seçim, il, ilçe/mahalle, mod, parti ve oylama türü adresin `#`
+  kısmında (`#secim=1977&il=6&mod=parti&parti=CHP`); "Bağlantıyı kopyala" düğmesi.
+- **Kaynaklar ve yöntem:** [`yontem.html`](yontem.html) — kaynaklar, tarihsel sınırlar, harita
+  okuma, bilinen eksikler; sade dille.
+- **CSV indirme:** tablo görünümünde ve Kaynaklar çekmecesinde; açık seçimin il ve ilçe sonuçları.
+- **Erişilebilirlik:** renk körü dostu palet (Okabe–Ito), klavyeyle gezinme ve ekran okuyucu
+  etiketleri, telefonda yatay kayma yok.
+
 ## Veri kaynakları
 
 Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir.
