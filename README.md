@@ -8,7 +8,7 @@ düzeyine kadar iniyor.
 
 Bu repo **sadece ön yüzü** (HTML/CSS/JS) ve **statik, üretilmiş veriyi**
 (`data/`, `geo/`) içerir — ham kaynaklar, PDF ayrıştırma/pipeline kodu ve
-tarihsel sınır araştırmaları ayrı (özel) bir depoda tutulur. Bu ayrımın
+tarihsel sınır araştırmaları ayrı kaynak depoda tutulur. Bu ayrımın
 amacı: bu repoyu açan birinin sadece siteyi çalıştıran kodu görmesi, veri
 üretiminin iç detaylarını değil.
 
@@ -109,3 +109,17 @@ kontrollü olarak uygulanır. İlk yükleme, yeniden deneme, tarihsel/modern yı
 geçişi, aynı dönem için eşzamanlı istekler, mahallelerin ihtiyaç anında yüklenmesi,
 eski mahalle yanıtının yeni seçimi bozmaması ve mobil hata akışı kapsanır.
 GitHub Actions aynı testleri push ve pull request olaylarında çalıştırır.
+
+## 04.10.2026 veri güncellemesi
+
+2007 referandumu 923 ilçeye tamamlandı. İstanbul 1989/1991 tarihî
+sınır katmanları, 2009/2011 ana ilçe birleşimleri ve Tillo meclis
+eşleştirmeleri kaynak depodan aktarıldı. 2019/2024 belediye meclisinde
+973 ilçenin tamamı sonuç içeriyor. Daha eski belirsiz sınırlar ve
+başkanlık/genel hattındaki kaynak eksikleri açıklamalı kalır.
+Bu yayın kopyası `export_static.py --public` ile üretilir; ham PDF ve
+mahalle atama kaynak tabloları burada yayımlanmaz.
+
+1961 genel seçimi için 21 ilçe daha kanun/sayım zincirleri ve açıklamalı
+yaklaşık çoğunluk yöntemiyle bağlandı; 23 ilçe belirsiz kalır. Ankara
+Merkez'in tarihî poligonu için ek kaynak gerekir.
