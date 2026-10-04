@@ -50,23 +50,24 @@
     $('#results').setAttribute('aria-busy', String(busy));
   }
 
-  let BUNDLE, GEO, GEO_ILCE, GEO_ILCE_HIST, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS, HARITA_NOTLARI;
+  // Ilce sinirlari (GEO_ILCE, GEO_ILCE_HIST; ~1MB sikistirilmis) acilista indirilmez: ulke haritasi
+  // yalniz il sinirlari ve secim verisiyle cizilir, ilce sinirlari ardindan arka planda ya da
+  // ilk ile inildiginde yuklenir (ensureIlceGeo).
+  let BUNDLE, GEO, GEO_ILCE = null, GEO_ILCE_HIST = null, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS, HARITA_NOTLARI;
   setResultsBusy(true);
   // Keep initialization retryable without reloading the page or attaching handlers twice.
   while(!BUNDLE){
     showLoadStatus('Harita verileri yükleniyor…');
     try{
-      const [partiler, il, ilce, ilceHist, meclis, mahalleCoverage, districtSplits, haritaNotlari] = await Promise.all([
+      const [partiler, il, meclis, mahalleCoverage, districtSplits, haritaNotlari] = await Promise.all([
         fetchJSON("data/parties.json"),
         fetchJSON("geo/il_sinirlari.geojson"),
-        fetchJSON("geo/ilce_sinirlari.geojson"),
-        fetchJSON("geo/ilce_sinirlari_hist.geojson"),
         fetchJSON("geo/meclis_2024.json", {}),
         fetchJSON("geo/mahalle_coverage.json", {}),
         fetchJSON("geo/district_splits.json", {}),
         fetchJSON("geo/harita_notlari.json", {}),
       ]);
-      GEO = il; GEO_ILCE = ilce; GEO_ILCE_HIST = ilceHist;
+      GEO = il;
       MECLIS_2024 = meclis; MAHALLE_COVERAGE = mahalleCoverage; DISTRICT_SPLITS = districtSplits; HARITA_NOTLARI = haritaNotlari;
       BUNDLE = {partiler, secimler: {}};
     }catch(error){
@@ -76,8 +77,9 @@
       }));
     }
   }
-  function loadMahalleGeometry(){
-    return fetchJSON("geo/mahalle_geo.json");
+  // Mahalle poligonlari ilce basina ayri dosyada: yalniz inilen ilcenin poligonlari indirilir.
+  function loadMahalleGeometry(geomId){
+    return fetchJSON("geo/mahalle/"+encodeURIComponent(geomId)+".json");
   }
   async function fetchElection(year){
     if(!(year in BUNDLE.secimler)) BUNDLE.secimler[year] = await fetchJSON("data/elections/"+year+".json");
@@ -89,8 +91,25 @@
     return fetchJSON("data/mahalle_votes/"+year+".json", {});
   }
   const geoFeatureById = {};
-  for(const f of GEO_ILCE.features){ geoFeatureById[f.properties.id] = f; }
-  for(const f of GEO_ILCE_HIST.features){ geoFeatureById[f.properties.id] = f; }
+  let ilceGeoPromise = null;
+  function ensureIlceGeo(){
+    if(!ilceGeoPromise){
+      ilceGeoPromise = Promise.all([
+        fetchJSON("geo/ilce_sinirlari.geojson"),
+        fetchJSON("geo/ilce_sinirlari_hist.geojson"),
+      ]).then(([ilce, ilceHist]) => {
+        if(!GEO_ILCE){
+          for(const f of ilce.features){ geoFeatureById[f.properties.id] = f; }
+          for(const f of ilceHist.features){ geoFeatureById[f.properties.id] = f; }
+          GEO_ILCE = ilce; GEO_ILCE_HIST = ilceHist;
+        }
+      }).catch(error => {
+        ilceGeoPromise = null; // basarisiz istek yeniden denenebilmeli
+        throw error;
+      });
+    }
+    return ilceGeoPromise;
+  }
 
   // Ilcenin gosterilecegi poligon, o ilcenin BUGUNKU plaka koduna gore degil, o secim
   // yilinda DATA.ilceler'de kayitli gercek idari bagliliga (plaka) ve o kaydin geomId'sine

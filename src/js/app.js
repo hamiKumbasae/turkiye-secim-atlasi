@@ -89,6 +89,8 @@
       renderTable();
       setResultsBusy(false);
       clearLoadStatus();
+      // ilk ile inmeden once ilce sinirlarini arka planda indir (hata olursa ile inerken yeniden denenir)
+      setTimeout(() => ensureIlceGeo().catch(() => {}), 0);
     }catch(error){
       if(ticket !== loadYearTicket) return;
       // Keep old results inert: they must not be mistaken for the requested election.

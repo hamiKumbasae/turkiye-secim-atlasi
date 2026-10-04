@@ -456,7 +456,7 @@
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü 4be3d09293</div>
+    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü cca4538ba4</div>
   </footer>
 </div>
 
@@ -488,7 +488,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = '4be3d09293';
+  const VERI_SURUMU = 'cca4538ba4';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -525,23 +525,24 @@
     $('#results').setAttribute('aria-busy', String(busy));
   }
 
-  let BUNDLE, GEO, GEO_ILCE, GEO_ILCE_HIST, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS, HARITA_NOTLARI;
+  // Ilce sinirlari (GEO_ILCE, GEO_ILCE_HIST; ~1MB sikistirilmis) acilista indirilmez: ulke haritasi
+  // yalniz il sinirlari ve secim verisiyle cizilir, ilce sinirlari ardindan arka planda ya da
+  // ilk ile inildiginde yuklenir (ensureIlceGeo).
+  let BUNDLE, GEO, GEO_ILCE = null, GEO_ILCE_HIST = null, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS, HARITA_NOTLARI;
   setResultsBusy(true);
   // Keep initialization retryable without reloading the page or attaching handlers twice.
   while(!BUNDLE){
     showLoadStatus('Harita verileri yükleniyor…');
     try{
-      const [partiler, il, ilce, ilceHist, meclis, mahalleCoverage, districtSplits, haritaNotlari] = await Promise.all([
+      const [partiler, il, meclis, mahalleCoverage, districtSplits, haritaNotlari] = await Promise.all([
         fetchJSON("data/parties.json"),
         fetchJSON("geo/il_sinirlari.geojson"),
-        fetchJSON("geo/ilce_sinirlari.geojson"),
-        fetchJSON("geo/ilce_sinirlari_hist.geojson"),
         fetchJSON("geo/meclis_2024.json", {}),
         fetchJSON("geo/mahalle_coverage.json", {}),
         fetchJSON("geo/district_splits.json", {}),
         fetchJSON("geo/harita_notlari.json", {}),
       ]);
-      GEO = il; GEO_ILCE = ilce; GEO_ILCE_HIST = ilceHist;
+      GEO = il;
       MECLIS_2024 = meclis; MAHALLE_COVERAGE = mahalleCoverage; DISTRICT_SPLITS = districtSplits; HARITA_NOTLARI = haritaNotlari;
       BUNDLE = {partiler, secimler: {}};
     }catch(error){
@@ -551,8 +552,9 @@
       }));
     }
   }
-  function loadMahalleGeometry(){
-    return fetchJSON("geo/mahalle_geo.json");
+  // Mahalle poligonlari ilce basina ayri dosyada: yalniz inilen ilcenin poligonlari indirilir.
+  function loadMahalleGeometry(geomId){
+    return fetchJSON("geo/mahalle/"+encodeURIComponent(geomId)+".json");
   }
   async function fetchElection(year){
     if(!(year in BUNDLE.secimler)) BUNDLE.secimler[year] = await fetchJSON("data/elections/"+year+".json");
@@ -564,8 +566,25 @@
     return fetchJSON("data/mahalle_votes/"+year+".json", {});
   }
   const geoFeatureById = {};
-  for(const f of GEO_ILCE.features){ geoFeatureById[f.properties.id] = f; }
-  for(const f of GEO_ILCE_HIST.features){ geoFeatureById[f.properties.id] = f; }
+  let ilceGeoPromise = null;
+  function ensureIlceGeo(){
+    if(!ilceGeoPromise){
+      ilceGeoPromise = Promise.all([
+        fetchJSON("geo/ilce_sinirlari.geojson"),
+        fetchJSON("geo/ilce_sinirlari_hist.geojson"),
+      ]).then(([ilce, ilceHist]) => {
+        if(!GEO_ILCE){
+          for(const f of ilce.features){ geoFeatureById[f.properties.id] = f; }
+          for(const f of ilceHist.features){ geoFeatureById[f.properties.id] = f; }
+          GEO_ILCE = ilce; GEO_ILCE_HIST = ilceHist;
+        }
+      }).catch(error => {
+        ilceGeoPromise = null; // basarisiz istek yeniden denenebilmeli
+        throw error;
+      });
+    }
+    return ilceGeoPromise;
+  }
 
   // Ilcenin gosterilecegi poligon, o ilcenin BUGUNKU plaka koduna gore degil, o secim
   // yilinda DATA.ilceler'de kayitli gercek idari bagliliga (plaka) ve o kaydin geomId'sine
@@ -1219,9 +1238,8 @@
     const votesForYear = await loadMahalleVotesForYear(year);
     const voteRows = votesForYear[geomId];
     if(!voteRows || !Object.keys(voteRows).length) return null;
-    // Do not download the large geometry for a district without neighborhood votes.
-    const geometry = await loadMahalleGeometry();
-    const geoRows = geometry[geomId];
+    // Mahalle oyu olmayan ilce icin poligon dosyasi hic istenmez.
+    const geoRows = await loadMahalleGeometry(geomId);
     if(!geoRows) return null;
     const rows = [];
     for(const osmId in voteRows){
@@ -1397,8 +1415,27 @@
   // ilce verisi varsa normal ilce-haritasina in; yoksa harita ulke goruminde
   // kalir, sahte bir "ilce gorunumu"ne gecilmez, sag panelde ilin kendi
   // sonucu gosterilir.
-  function goToProvince(plaka){
+  // Ilce sinirlari henuz inmediyse once onlar beklenir (bkz. ensureIlceGeo); bu arada baska
+  // bir il ya da secim secilirse gec gelen sonuc gorunumu degistirmez.
+  let provinceLoadTicket = 0;
+  async function goToProvince(plaka){
+    const ticket = ++provinceLoadTicket;
     if(provinceHasDistrictData(plaka)){
+      if(!GEO_ILCE){
+        const yearTicket = loadYearTicket;
+        const stillCurrent = () => ticket === provinceLoadTicket && yearTicket === loadYearTicket;
+        showLoadStatus('İlçe sınırları yükleniyor…');
+        try{
+          await ensureIlceGeo();
+        }catch(error){
+          if(stillCurrent()) showLoadStatus('İlçe sınırları yüklenemedi. Bağlantınızı kontrol edip yeniden deneyin.', () => {
+            if(stillCurrent()) goToProvince(plaka);
+          });
+          return;
+        }
+        if(!stillCurrent()) return;
+        clearLoadStatus();
+      }
       drillIntoProvince(plaka);
     } else {
       if(view.level!=='country') renderCountryMap();
@@ -2156,6 +2193,8 @@
       renderTable();
       setResultsBusy(false);
       clearLoadStatus();
+      // ilk ile inmeden once ilce sinirlarini arka planda indir (hata olursa ile inerken yeniden denenir)
+      setTimeout(() => ensureIlceGeo().catch(() => {}), 0);
     }catch(error){
       if(ticket !== loadYearTicket) return;
       // Keep old results inert: they must not be mistaken for the requested election.

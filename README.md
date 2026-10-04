@@ -59,7 +59,7 @@ data/mahalle_votes/<year>.json  Mahalle/muhtarlık düzeyi oy verisi olan
                              edilir.
 
 geo/il_sinirlari.geojson, ilce_sinirlari.geojson, ilce_sinirlari_hist.geojson,
-geo/mahalle_geo.json (ilk uygun ilçe seçiminde yüklenir),
+geo/mahalle/<ilçe>.json (ilçe başına mahalle poligonları, o ilçeye inilince yüklenir),
 geo/district_splits.json, geo/meclis_2024.json,
 geo/mahalle_coverage.json, geo/eras/<dönem>.geojson  Harita geometrisi.
 
@@ -87,10 +87,14 @@ sadece son isteğin verileri ekrana uygulanır. Yükleme sırasında eski sonuç
 soluk ve etkileşimsiz tutulur; başka yıl veya seçim türü seçilebilir.
 Bağlantı hatalarında **Yeniden dene** aynı isteği sayfayı yenilemeden tekrarlar.
 
-`geo/mahalle_geo.json` açılışta indirilmez. Önce tıklanan ilçenin seçilen yılda
-mahalle oy verisi olup olmadığı kontrol edilir; varsa geometri ilk kez yüklenir
-ve oturum boyunca önbellekte tutulur. Şu an geometri ilçe dosyalarına bölünmüş
-değildir; ilk uygun ilçe seçiminde tüm geometri dosyası indirilir.
+Açılışta yalnız il sınırları ve seçilen seçimin sonuçları indirilir (~170 KB
+sıkıştırılmış); harita bunlarla hemen çizilir. İlçe sınırları (~1 MB) ardından arka
+planda yüklenir; kullanıcı daha önce bir ile tıklarsa "İlçe sınırları yükleniyor…"
+gösterilir.
+
+Mahalle poligonları ilçe başına ayrı dosyadadır (`geo/mahalle/<ilçe>.json`, en büyüğü
+~150 KB). Önce tıklanan ilçenin seçilen yılda mahalle oy verisi olup olmadığı kontrol
+edilir; varsa yalnız o ilçenin poligonları indirilir ve oturum boyunca önbellekte tutulur.
 
 ## Otomatik testler
 

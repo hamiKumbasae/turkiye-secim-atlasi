@@ -169,9 +169,8 @@
     const votesForYear = await loadMahalleVotesForYear(year);
     const voteRows = votesForYear[geomId];
     if(!voteRows || !Object.keys(voteRows).length) return null;
-    // Do not download the large geometry for a district without neighborhood votes.
-    const geometry = await loadMahalleGeometry();
-    const geoRows = geometry[geomId];
+    // Mahalle oyu olmayan ilce icin poligon dosyasi hic istenmez.
+    const geoRows = await loadMahalleGeometry(geomId);
     if(!geoRows) return null;
     const rows = [];
     for(const osmId in voteRows){
@@ -347,8 +346,27 @@
   // ilce verisi varsa normal ilce-haritasina in; yoksa harita ulke goruminde
   // kalir, sahte bir "ilce gorunumu"ne gecilmez, sag panelde ilin kendi
   // sonucu gosterilir.
-  function goToProvince(plaka){
+  // Ilce sinirlari henuz inmediyse once onlar beklenir (bkz. ensureIlceGeo); bu arada baska
+  // bir il ya da secim secilirse gec gelen sonuc gorunumu degistirmez.
+  let provinceLoadTicket = 0;
+  async function goToProvince(plaka){
+    const ticket = ++provinceLoadTicket;
     if(provinceHasDistrictData(plaka)){
+      if(!GEO_ILCE){
+        const yearTicket = loadYearTicket;
+        const stillCurrent = () => ticket === provinceLoadTicket && yearTicket === loadYearTicket;
+        showLoadStatus('İlçe sınırları yükleniyor…');
+        try{
+          await ensureIlceGeo();
+        }catch(error){
+          if(stillCurrent()) showLoadStatus('İlçe sınırları yüklenemedi. Bağlantınızı kontrol edip yeniden deneyin.', () => {
+            if(stillCurrent()) goToProvince(plaka);
+          });
+          return;
+        }
+        if(!stillCurrent()) return;
+        clearLoadStatus();
+      }
       drillIntoProvince(plaka);
     } else {
       if(view.level!=='country') renderCountryMap();

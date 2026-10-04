@@ -42,7 +42,9 @@ test('initial load excludes neighborhood geometry and votes', async t => {
   const {page, requests} = await setup(t);
   await ready(page);
   assert.equal(await activeYear(page), '2023');
-  assert(!requests.includes('geo/mahalle_geo.json'));
+  assert(!requests.some(x => x.startsWith('geo/mahalle/')));
+  // ilce sinirlari ilk cizimi beklemez: arka planda sonradan iner
+  assert(!requests.slice(0, requests.indexOf('data/elections/2023.json') + 1).includes('geo/ilce_sinirlari.geojson'));
   assert(!requests.some(x => x.startsWith('data/mahalle_votes/')));
  });
 
@@ -107,7 +109,7 @@ test('two years in the same era share an in-flight geometry request safely', asy
 test('district drilldown loads neighborhood geometry on demand and retries failures', async t => {
   let attempts = 0;
   const {page, requests} = await setup(t, async (name, route) => {
-    if(name === 'geo/mahalle_geo.json' && ++attempts === 1){ await route.fulfill({status:503, body:'unavailable'}); return true; }
+    if(name === 'geo/mahalle/TR-D-01-001.json' && ++attempts === 1){ await route.fulfill({status:503, body:'unavailable'}); return true; }
   });
   await ready(page);
   await page.locator('#mapSvg path[data-plaka="1"]').click();
@@ -132,7 +134,7 @@ test('late neighborhood response cannot replace a newly selected election', asyn
   while(!release) await tick(page);
   await year(page, '2018'); await ready(page);
   release();
-  await page.waitForResponse('**/geo/mahalle_geo.json*');
+  await page.waitForResponse('**/geo/mahalle/TR-D-01-001.json*');
   await tick(page);
   assert.equal(await activeYear(page), '2018');
   assert.equal(await page.locator('#mapSvg path[data-mahalle-id]').count(), 0);
@@ -177,4 +179,17 @@ test('mobile viewport exposes retry and preserves controls after recovery', asyn
   await page.locator('#retryLoad').click(); await ready(page);
   assert.equal(await activeYear(page), '2018');
   assert.equal(await page.locator('#results').evaluate(el => el.inert), false);
+});
+
+test('district boundaries load in the background and recover when the first request fails', async t => {
+  let attempts = 0;
+  const {page} = await setup(t, async (name, route) => {
+    if(name === 'geo/ilce_sinirlari.geojson' && ++attempts === 1){ await route.abort('internetdisconnected'); return true; }
+  });
+  await ready(page);
+  while(attempts < 1) await tick(page);
+  await page.locator('#mapSvg path[data-plaka="6"]').click();
+  await page.locator('#mapSvg path[data-geom-id]').first().waitFor();
+  assert.equal(attempts, 2);
+  assert(await page.locator('#mapSvg path[data-geom-id]').count() > 20);
 });
