@@ -8,7 +8,7 @@ düzeyine kadar iniyor.
 
 Bu repo **sadece ön yüzü** (HTML/CSS/JS) ve **statik, üretilmiş veriyi**
 (`data/`, `geo/`) içerir — ham kaynaklar, PDF ayrıştırma/pipeline kodu ve
-tarihsel sınır araştırmaları ayrı (özel) bir depoda tutulur. Bu ayrımın
+tarihsel sınır araştırmaları ayrı kaynak depoda tutulur. Bu ayrımın
 amacı: bu repoyu açan birinin sadece siteyi çalıştıran kodu görmesi, veri
 üretiminin iç detaylarını değil.
 
@@ -119,3 +119,7 @@ eşleştirmeleri kaynak depodan aktarıldı. 2019/2024 belediye meclisinde
 başkanlık/genel hattındaki kaynak eksikleri açıklamalı kalır.
 Bu yayın kopyası `export_static.py --public` ile üretilir; ham PDF ve
 mahalle atama kaynak tabloları burada yayımlanmaz.
+
+1961 genel seçimi için 21 ilçe daha kanun/sayım zincirleri ve açıklamalı
+yaklaşık çoğunluk yöntemiyle bağlandı; 23 ilçe belirsiz kalır. Ankara
+Merkez'in tarihî poligonu için ek kaynak gerekir.
