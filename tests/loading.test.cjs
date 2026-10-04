@@ -193,3 +193,17 @@ test('district boundaries load in the background and recover when the first requ
   assert.equal(attempts, 2);
   assert(await page.locator('#mapSvg path[data-geom-id]').count() > 20);
 });
+
+test('change mode compares with the previous election of the same type', async t => {
+  const {page, requests} = await setup(t);
+  await ready(page);
+  await page.locator('#modeGroup button[data-mode="degisim"]').click();
+  await page.locator('#seqNote:not([hidden])').waitFor();
+  assert(requests.includes('data/elections/2018.json'));
+  assert.match(await page.locator('#seqNote').textContent(), /2018 → 2023/);
+  const fills = await page.locator('#mapSvg path.geo-path').evaluateAll(els => els.map(el => el.getAttribute('fill')));
+  assert(fills.filter(f => f && f.startsWith('hsl(')).length > 70);
+  // the oldest election has nothing to compare with
+  await year(page, '1950'); await ready(page);
+  assert.equal(await page.locator('#modeGroup button[data-mode="degisim"]').isHidden(), true);
+});
