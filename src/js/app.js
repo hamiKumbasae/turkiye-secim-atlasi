@@ -1,5 +1,6 @@
   // ---------------- theme change redraw ----------------
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
+    if(!DATA) return;
     applyMapMode(); renderSeatBar();
     if(selectedPlaka) selectProvince(selectedPlaka);
   });
@@ -29,6 +30,7 @@
     $('#btnTurReferandum').classList.toggle('active', tur==='referandum');
     $('#btnTurYerel').classList.toggle('active', tur==='yerel');
     $('#btnTurCB').classList.toggle('active', tur==='cumhurbaskanligi');
+    renderYearPicker();
     loadYear(TUR_YEARS[tur][0]);
   }
 
@@ -38,45 +40,60 @@
   let loadYearTicket = 0;
   async function loadYear(year){
     const ticket = ++loadYearTicket;
-    currentYear = year;
-    // Geo (harita siniri) ve secim verisi (il/ilce sonuclari) BAGIMSIZ
-    // dosyalar - ikisini paralel fetch etmek, sirayla beklemekten daha hizli.
-    const [, data] = await Promise.all([ensureGeoForYear(year), fetchElection(year)]);
-    if(ticket !== loadYearTicket) return; // bu arada baska bir yil secildi, bu sonuc artik gecersiz
-    const kayit = await oylamaKaydi(year, data);
-    if(ticket !== loadYearTicket) return;
-    DATA = kayit;
-    MAJOR = DATA.majorPartiler;
-    ilByPlaka = Object.fromEntries(DATA.iller.map(p => [p.plaka, p]));
-    districtsByPlaka = {};
-    for(const d of DATA.ilceler){ (districtsByPlaka[d.plaka] ||= []).push(d); }
-    districtByGeomId = {};
-    for(const d of DATA.ilceler){ if(d.geomId) districtByGeomId[d.geomId] = d; }
+    const oylama = currentOylama;
+    cancelDistrictLoad();
+    setResultsBusy(true);
+    showLoadStatus('Seçim sonuçları yükleniyor…');
+    try{
+      // Geo (harita siniri) ve secim verisi (il/ilce sonuclari) BAGIMSIZ
+      // dosyalar - ikisini paralel fetch etmek, sirayla beklemekten daha hizli.
+      const [geo, data] = await Promise.all([ensureGeoForYear(year), fetchElection(year)]);
+      if(ticket !== loadYearTicket) return; // bu arada baska bir yil secildi, bu sonuc artik gecersiz
+      const kayit = await oylamaKaydi(year, data, oylama);
+      if(ticket !== loadYearTicket) return;
+      GEO = geo;
+      countryProject = computeProjection(GEO.features, PAD);
+      currentYear = year;
+      currentOylama = kayit.oylama || 'baskan';
+      DATA = kayit;
+      MAJOR = DATA.majorPartiler;
+      ilByPlaka = Object.fromEntries(DATA.iller.map(p => [p.plaka, p]));
+      districtsByPlaka = {};
+      for(const d of DATA.ilceler){ (districtsByPlaka[d.plaka] ||= []).push(d); }
+      districtByGeomId = {};
+      for(const d of DATA.ilceler){ if(d.geomId) districtByGeomId[d.geomId] = d; }
 
-    selectedPlaka = null;
-    const isRef = DATA.tur === 'referandum';
-    const isYerel = DATA.tur === 'yerel';
-    const isCB = DATA.tur === 'cumhurbaskanligi';
+      selectedPlaka = null;
+      const isRef = DATA.tur === 'referandum';
+      const isYerel = DATA.tur === 'yerel';
+      const isCB = DATA.tur === 'cumhurbaskanligi';
 
-    $('#detailEmpty').style.display='block';
-    $('#detailBody').style.display='none';
-    $('#detailEmpty').textContent = 'Bir ile tıklayarak veya arayarak detayları görün.';
-    $('#detailViewToggle').style.display='none';
-    detailView = 'baskanlik';
-    $('#btnTableViewCount').textContent = DATA.iller.length;
-    $('#dSeatsLabel').textContent = isRef ? 'Sonuç' : (isYerel || isCB || YEARS_NO_VEKIL.has(currentYear) ? 'Kazanan' : 'Milletvekili');
-    $('#tableTitle').textContent = 'Türkiye · '+DATA.ad+' · İl Sonuçları';
+      $('#detailEmpty').style.display='block';
+      $('#detailBody').style.display='none';
+      $('#detailEmpty').textContent = 'Bir ile tıklayarak veya arayarak detayları görün.';
+      $('#detailViewToggle').style.display='none';
+      detailView = 'baskanlik';
+      $('#btnTableViewCount').textContent = DATA.iller.length;
+      $('#dSeatsLabel').textContent = isRef ? 'Sonuç' : (isYerel || isCB || YEARS_NO_VEKIL.has(currentYear) ? 'Kazanan' : 'Milletvekili');
+      $('#tableTitle').textContent = 'Türkiye · '+DATA.ad+' · İl Sonuçları';
 
-    resetMapModeUI();
+      resetMapModeUI();
 
-    renderElectionBar();
-    renderNationalSummary();
-    renderYearPicker();
-    renderOylamaToggle();
-    renderSeatBar();
-    renderYurtdisiCard();
-    renderCountryMap();
-    renderTable();
+      renderElectionBar();
+      renderNationalSummary();
+      renderYearPicker();
+      renderOylamaToggle();
+      renderSeatBar();
+      renderYurtdisiCard();
+      renderCountryMap();
+      renderTable();
+      setResultsBusy(false);
+      clearLoadStatus();
+    }catch(error){
+      if(ticket !== loadYearTicket) return;
+      // Keep old results inert: they must not be mistaken for the requested election.
+      showLoadStatus('Seçim sonuçları yüklenemedi. Bağlantınızı kontrol edip yeniden deneyin.', () => loadYear(year));
+    }
   }
 
   $('#btnTurGenel').addEventListener('click', ()=> switchTur('genel'));

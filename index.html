@@ -279,6 +279,12 @@
   .oylama-tabs button.active{background:var(--ink-1); border-color:var(--ink-1); color:var(--surface-1);}
   .oylama-tabs button:disabled{opacity:.45; cursor:not-allowed;}
 
+/* Loading and recoverable errors; election selectors stay usable while loading. */
+.load-status { display:flex; align-items:center; gap:12px; padding:14px; margin:12px 0; border:1px solid var(--ink-3); border-radius:8px; }
+.load-status[hidden], #retryLoad[hidden] { display:none; }
+.load-status[data-state="error"] { border-color:#b45309; }
+#results[aria-busy="true"] { opacity:.45; pointer-events:none; }
+
 </style>
 </head>
 <body>
@@ -304,6 +310,11 @@
 
   <div class="year-timeline" id="yearPicker"></div>
 
+  <div id="loadStatus" class="load-status" data-state="loading">
+    <span id="loadMessage" role="status" aria-live="polite">Harita verileri yükleniyor…</span>
+    <button id="retryLoad" type="button" hidden>Yeniden dene</button>
+  </div>
+  <main id="results" inert aria-busy="true">
   <div class="oylama-tabs" id="oylamaToggle" hidden>
     <button data-oylama="baskan">Belediye Başkanı</button>
     <button data-oylama="igm">İl Genel Meclisi</button>
@@ -436,6 +447,8 @@
     <div class="legend" id="yurtdisiLegend"></div>
   </section>
 
+  </main>
+
   <footer>
     <div class="footer-brand">Türkiye Seçim Tarihi Atlası</div>
     <div class="footer-links">
@@ -443,7 +456,7 @@
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 29.09.2026 · veri sürümü a338b61f57</div>
+    <div class="footer-disclaimer">Son güncelleme: 29.09.2026 · veri sürümü 89e9913244</div>
   </footer>
 </div>
 
@@ -475,7 +488,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = 'a338b61f57';
+  const VERI_SURUMU = '89e9913244';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -486,34 +499,60 @@
           throw new Error('Veri alınamadı: '+path+' ('+res.status+')');
         }
         return res.json();
-      })();
+      })().catch(error => {
+        delete FETCH_CACHE[path]; // A failed request must be retryable.
+        throw error;
+      });
     }
     return FETCH_CACHE[path];
   }
 
-  let BUNDLE, GEO, GEO_ILCE, GEO_ILCE_HIST, MAHALLE_GEO, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS, HARITA_NOTLARI;
-  try{
-    // Paylasimli/nispeten kucuk dosyalar (geo, mahalle poligonlari, parti
-    // renkleri) burada eager yukleniyor. Secimler ve mahalle oy verisi ise
-    // lazy - her yil sadece secildiginde fetchElection()/loadMahalleVotesForYear()
-    // ile indirilir (bkz. app.js: loadYear).
-    const [partiler, il, ilce, ilceHist, mahalleGeo, meclis, mahalleCoverage, districtSplits, haritaNotlari] = await Promise.all([
-      fetchJSON("data/parties.json"),
-      fetchJSON("geo/il_sinirlari.geojson"),
-      fetchJSON("geo/ilce_sinirlari.geojson"),
-      fetchJSON("geo/ilce_sinirlari_hist.geojson"),
-      fetchJSON("geo/mahalle_geo.json", {}),
-      fetchJSON("geo/meclis_2024.json", {}),
-      fetchJSON("geo/mahalle_coverage.json", {}),
-      fetchJSON("geo/district_splits.json", {}),
-      fetchJSON("geo/harita_notlari.json", {}),
-    ]);
-    BUNDLE = {partiler, secimler: {}};
-    GEO = il; GEO_ILCE = ilce; GEO_ILCE_HIST = ilceHist; MAHALLE_GEO = mahalleGeo;
-    MECLIS_2024 = meclis; MAHALLE_COVERAGE = mahalleCoverage; DISTRICT_SPLITS = districtSplits; HARITA_NOTLARI = haritaNotlari;
-  }catch(e){
-    document.body.innerHTML = '<div class="wrap"><p>Veri yüklenemedi: '+e+'</p></div>';
-    return;
+  // Shared status UI also works before the rest of the app has initialized.
+  function showLoadStatus(message, retry = null){
+    const box = $('#loadStatus');
+    box.hidden = false;
+    box.dataset.state = retry ? 'error' : 'loading';
+    $('#loadMessage').textContent = message;
+    $('#retryLoad').hidden = !retry;
+    $('#retryLoad').onclick = retry;
+  }
+  function clearLoadStatus(){
+    $('#loadStatus').hidden = true;
+    $('#retryLoad').onclick = null;
+  }
+  function setResultsBusy(busy){
+    $('#results').inert = busy;
+    $('#results').setAttribute('aria-busy', String(busy));
+  }
+
+  let BUNDLE, GEO, GEO_ILCE, GEO_ILCE_HIST, MECLIS_2024, MAHALLE_COVERAGE, DISTRICT_SPLITS, HARITA_NOTLARI;
+  setResultsBusy(true);
+  // Keep initialization retryable without reloading the page or attaching handlers twice.
+  while(!BUNDLE){
+    showLoadStatus('Harita verileri yükleniyor…');
+    try{
+      const [partiler, il, ilce, ilceHist, meclis, mahalleCoverage, districtSplits, haritaNotlari] = await Promise.all([
+        fetchJSON("data/parties.json"),
+        fetchJSON("geo/il_sinirlari.geojson"),
+        fetchJSON("geo/ilce_sinirlari.geojson"),
+        fetchJSON("geo/ilce_sinirlari_hist.geojson"),
+        fetchJSON("geo/meclis_2024.json", {}),
+        fetchJSON("geo/mahalle_coverage.json", {}),
+        fetchJSON("geo/district_splits.json", {}),
+        fetchJSON("geo/harita_notlari.json", {}),
+      ]);
+      GEO = il; GEO_ILCE = ilce; GEO_ILCE_HIST = ilceHist;
+      MECLIS_2024 = meclis; MAHALLE_COVERAGE = mahalleCoverage; DISTRICT_SPLITS = districtSplits; HARITA_NOTLARI = haritaNotlari;
+      BUNDLE = {partiler, secimler: {}};
+    }catch(error){
+      await new Promise(resolve => showLoadStatus('Harita verileri yüklenemedi. Bağlantınızı kontrol edip yeniden deneyin.', () => {
+        $('#retryLoad').onclick = null;
+        resolve();
+      }));
+    }
+  }
+  function loadMahalleGeometry(){
+    return fetchJSON("geo/mahalle_geo.json");
   }
   async function fetchElection(year){
     if(!(year in BUNDLE.secimler)) BUNDLE.secimler[year] = await fetchJSON("data/elections/"+year+".json");
@@ -590,11 +629,10 @@
     igm: 'YSK Açık Veri Portalı — il genel meclisi üyeliği oyları (sandık düzeyinden toplandı). İlçe sonucu ilçenin tamamıdır (beldeler dahil). 2014\'ten beri büyükşehirlerde il genel meclisi seçilmez (6360 sayılı Kanun).',
     bm: 'YSK Açık Veri Portalı — belediye meclisi üyeliği oyları (sandık düzeyinden toplandı). İlçe sonucu yalnız ilçe belediyesinin meclisidir, belde meclisleri hariç. İl sonucu ildeki bütün belediye meclislerinin toplamıdır.',
   };
-  async function oylamaKaydi(year, baskanKaydi){
-    if(baskanKaydi.tur !== 'yerel' || currentOylama === 'baskan') return baskanKaydi;
-    const k = OYLAMA_YILLARI.has(year) ? await loadOylama(year, currentOylama) : null;
+  async function oylamaKaydi(year, baskanKaydi, oylama){
+    if(baskanKaydi.tur !== 'yerel' || oylama === 'baskan') return baskanKaydi;
+    const k = OYLAMA_YILLARI.has(year) ? await loadOylama(year, oylama) : null;
     if(k) return k;
-    currentOylama = 'baskan';
     return baskanKaydi;
   }
   function renderOylamaToggle(){
@@ -1071,21 +1109,10 @@
     return null; // 2002+ -> modern (GEO_MODERN), birlestirme gerekmiyor
   }
   const GEO_MODERN = GEO;
-  const geoEraCache = {};
-  let currentGeoEra = null;
+  // Fetching must not mutate the visible map: only the winning loadYear commits it.
   async function ensureGeoForYear(year){
     const suffix = eraSuffixForYear(year);
-    if(suffix === currentGeoEra) return;
-    currentGeoEra = suffix;
-    if(suffix === null){
-      GEO = GEO_MODERN;
-    } else if(geoEraCache[suffix]){
-      GEO = geoEraCache[suffix];
-    } else {
-      GEO = await fetchJSON("geo/eras/"+suffix+".geojson");
-      geoEraCache[suffix] = GEO;
-    }
-    countryProject = computeProjection(GEO.features, PAD);
+    return suffix === null ? GEO_MODERN : fetchJSON("geo/eras/"+suffix+".geojson");
   }
 
   // 2024 yerel seciminde ilce meclisi verisi olan 4 buyuksehir - artik bir
@@ -1163,6 +1190,7 @@
   }
 
   function renderCountryMap(){
+    cancelDistrictLoad();
     view = {level:'country', plaka:null};
     svg.innerHTML = '';
     pathByPlaka = {}; pathByGeomId = {};
@@ -1184,19 +1212,15 @@
     applyMapMode();
   }
 
-  // Ucuz, senkron on-kontrol: bu ilcenin HIC mahalle poligonu var mi (yildan
-  // bagimsiz, MAHALLE_GEO hep eager yuklu). Gercek oy verisi (yil bazli,
-  // lazy) icin mahalleDataForDistrict'i await edin.
-  function mahalleGeoExistsForDistrict(geomId){
-    return !!MAHALLE_GEO[geomId];
-  }
-
-  async function mahalleDataForDistrict(geomId){
-    const geoRows = MAHALLE_GEO[geomId];
-    if(!geoRows || DATA.oylama) return null; // mahalle oylari yalniz baskanlik secimi icin var
-    const votesForYear = await loadMahalleVotesForYear(currentYear);
+  async function mahalleDataForDistrict(geomId, year, oylama){
+    if(oylama || !(year in MAHALLE_COVERAGE)) return null;
+    const votesForYear = await loadMahalleVotesForYear(year);
     const voteRows = votesForYear[geomId];
-    if(!voteRows) return null;
+    if(!voteRows || !Object.keys(voteRows).length) return null;
+    // Do not download the large geometry for a district without neighborhood votes.
+    const geometry = await loadMahalleGeometry();
+    const geoRows = geometry[geomId];
+    if(!geoRows) return null;
     const rows = [];
     for(const osmId in voteRows){
       const g = geoRows[osmId]; if(!g) continue;
@@ -1204,6 +1228,36 @@
       rows.push({id:osmId, ad:g.ad, geometry:g.geometry, secmen:v.secmen, sandik:v.sandik, katilim:v.katilim, kazanan:v.kazanan, oy:v.oy});
     }
     return rows.length ? rows : null;
+  }
+
+  let districtLoadTicket = 0;
+  function cancelDistrictLoad(){
+    districtLoadTicket++;
+    clearLoadStatus();
+  }
+  async function openDistrict(plaka, geomId){
+    const d = districtByGeomId[geomId];
+    if(!d) return;
+    const ticket = ++districtLoadTicket;
+    const yearTicket = loadYearTicket;
+    const origin = view;
+    const year = currentYear;
+    const oylama = DATA.oylama;
+    const stillCurrent = () => ticket === districtLoadTicket && yearTicket === loadYearTicket && view === origin;
+    selectDistrict(d, plaka);
+    showLoadStatus('Mahalle verileri yükleniyor…');
+    try{
+      const rows = await mahalleDataForDistrict(geomId, year, oylama);
+      if(!stillCurrent()) return;
+      clearLoadStatus();
+      if(rows) renderMahalleMap(plaka, geomId, rows);
+      else if(pathByGeomId[geomId]) pathByGeomId[geomId].scrollIntoView({block:'nearest'});
+    }catch(error){
+      if(!stillCurrent()) return;
+      showLoadStatus('Mahalle verileri yüklenemedi. İlçe sonuçları gösteriliyor.', () => {
+        if(stillCurrent()) openDistrict(plaka, geomId);
+      });
+    }
   }
 
   // Bazı ilçeler için gerçek tarihsel poligon birleşimi var (bkz.
@@ -1245,6 +1299,7 @@
   function bosDolgu(geomId){ return gecisNotu(geomId) ? 'url(#hatchGecis)' : 'var(--map-empty)'; }
 
   function renderProvinceMap(plaka){
+    cancelDistrictLoad();
     view = {level:'province', plaka};
     const allDataFeats = districtFeaturesForProvince(plaka);
     // Sadece GERCEKTEN sonucu olan ilceler tiklanabilir/etkilesimli olsun -
@@ -1317,17 +1372,7 @@
       el.dataset.geomId = geomId;
       el.addEventListener('mousemove', e=>showTooltip(e, {kind:'ilce', plaka, geomId}));
       el.addEventListener('mouseleave', hideTooltip);
-      el.addEventListener('click', async ()=>{
-        const d = districtByGeomId[geomId];
-        // Mahalle haritasina inerken bile once ilcenin KENDI verisini panelde
-        // goster - tiklanan yerin verisi eskisini ezmeli, kullanici sonra
-        // istedigi mahalleye ayrica tiklayabilir.
-        if(d) selectDistrict(d, plaka);
-        if(mahalleGeoExistsForDistrict(geomId)){
-          const rows = await mahalleDataForDistrict(geomId);
-          if(rows){ renderMahalleMap(plaka, geomId, rows); return; }
-        }
-      });
+      el.addEventListener('click', ()=> openDistrict(plaka, geomId));
       svg.appendChild(el);
       pathByGeomId[geomId]=el;
     }
@@ -1735,14 +1780,8 @@
         row.addEventListener('mouseenter', ()=> pathByGeomId[d.geomId].classList.add('selected'));
         row.addEventListener('mouseleave', ()=> pathByGeomId[d.geomId].classList.remove('selected'));
       }
-      row.addEventListener('click', async ()=>{
-        if(!d.geomId) return;
-        selectDistrict(d, plaka);
-        if(mahalleGeoExistsForDistrict(d.geomId)){
-          const rows = await mahalleDataForDistrict(d.geomId);
-          if(rows){ renderMahalleMap(plaka, d.geomId, rows); return; }
-        }
-        if(pathByGeomId[d.geomId]) pathByGeomId[d.geomId].scrollIntoView({block:'nearest'});
+      row.addEventListener('click', ()=> {
+        if(d.geomId) openDistrict(plaka, d.geomId);
       });
       el.appendChild(row);
     }
@@ -1806,6 +1845,7 @@
   }
 
   function renderMeclisOverview(plaka){
+    cancelDistrictLoad();
     $('#dInfoNote').style.display='none';
     setHero('İlçe Meclisi', 'İlçe seçin', null, null);
     $('#dTurnout').textContent='—'; $('#dSecmen').textContent='—'; $('#dGecerli').textContent='—';
@@ -1822,6 +1862,7 @@
   }
 
   function renderMeclisIlceMap(plaka, geomId){
+    cancelDistrictLoad();
     const f = geoFeatureById[geomId];
     if(!f) return; // view SONRA degisir - basarisiz cagri onceki gorunumu bozmamali
     view = {level:'meclis-ilce', plaka, geomId};
@@ -2024,6 +2065,7 @@
 
   // ---------------- theme change redraw ----------------
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
+    if(!DATA) return;
     applyMapMode(); renderSeatBar();
     if(selectedPlaka) selectProvince(selectedPlaka);
   });
@@ -2053,6 +2095,7 @@
     $('#btnTurReferandum').classList.toggle('active', tur==='referandum');
     $('#btnTurYerel').classList.toggle('active', tur==='yerel');
     $('#btnTurCB').classList.toggle('active', tur==='cumhurbaskanligi');
+    renderYearPicker();
     loadYear(TUR_YEARS[tur][0]);
   }
 
@@ -2062,45 +2105,60 @@
   let loadYearTicket = 0;
   async function loadYear(year){
     const ticket = ++loadYearTicket;
-    currentYear = year;
-    // Geo (harita siniri) ve secim verisi (il/ilce sonuclari) BAGIMSIZ
-    // dosyalar - ikisini paralel fetch etmek, sirayla beklemekten daha hizli.
-    const [, data] = await Promise.all([ensureGeoForYear(year), fetchElection(year)]);
-    if(ticket !== loadYearTicket) return; // bu arada baska bir yil secildi, bu sonuc artik gecersiz
-    const kayit = await oylamaKaydi(year, data);
-    if(ticket !== loadYearTicket) return;
-    DATA = kayit;
-    MAJOR = DATA.majorPartiler;
-    ilByPlaka = Object.fromEntries(DATA.iller.map(p => [p.plaka, p]));
-    districtsByPlaka = {};
-    for(const d of DATA.ilceler){ (districtsByPlaka[d.plaka] ||= []).push(d); }
-    districtByGeomId = {};
-    for(const d of DATA.ilceler){ if(d.geomId) districtByGeomId[d.geomId] = d; }
+    const oylama = currentOylama;
+    cancelDistrictLoad();
+    setResultsBusy(true);
+    showLoadStatus('Seçim sonuçları yükleniyor…');
+    try{
+      // Geo (harita siniri) ve secim verisi (il/ilce sonuclari) BAGIMSIZ
+      // dosyalar - ikisini paralel fetch etmek, sirayla beklemekten daha hizli.
+      const [geo, data] = await Promise.all([ensureGeoForYear(year), fetchElection(year)]);
+      if(ticket !== loadYearTicket) return; // bu arada baska bir yil secildi, bu sonuc artik gecersiz
+      const kayit = await oylamaKaydi(year, data, oylama);
+      if(ticket !== loadYearTicket) return;
+      GEO = geo;
+      countryProject = computeProjection(GEO.features, PAD);
+      currentYear = year;
+      currentOylama = kayit.oylama || 'baskan';
+      DATA = kayit;
+      MAJOR = DATA.majorPartiler;
+      ilByPlaka = Object.fromEntries(DATA.iller.map(p => [p.plaka, p]));
+      districtsByPlaka = {};
+      for(const d of DATA.ilceler){ (districtsByPlaka[d.plaka] ||= []).push(d); }
+      districtByGeomId = {};
+      for(const d of DATA.ilceler){ if(d.geomId) districtByGeomId[d.geomId] = d; }
 
-    selectedPlaka = null;
-    const isRef = DATA.tur === 'referandum';
-    const isYerel = DATA.tur === 'yerel';
-    const isCB = DATA.tur === 'cumhurbaskanligi';
+      selectedPlaka = null;
+      const isRef = DATA.tur === 'referandum';
+      const isYerel = DATA.tur === 'yerel';
+      const isCB = DATA.tur === 'cumhurbaskanligi';
 
-    $('#detailEmpty').style.display='block';
-    $('#detailBody').style.display='none';
-    $('#detailEmpty').textContent = 'Bir ile tıklayarak veya arayarak detayları görün.';
-    $('#detailViewToggle').style.display='none';
-    detailView = 'baskanlik';
-    $('#btnTableViewCount').textContent = DATA.iller.length;
-    $('#dSeatsLabel').textContent = isRef ? 'Sonuç' : (isYerel || isCB || YEARS_NO_VEKIL.has(currentYear) ? 'Kazanan' : 'Milletvekili');
-    $('#tableTitle').textContent = 'Türkiye · '+DATA.ad+' · İl Sonuçları';
+      $('#detailEmpty').style.display='block';
+      $('#detailBody').style.display='none';
+      $('#detailEmpty').textContent = 'Bir ile tıklayarak veya arayarak detayları görün.';
+      $('#detailViewToggle').style.display='none';
+      detailView = 'baskanlik';
+      $('#btnTableViewCount').textContent = DATA.iller.length;
+      $('#dSeatsLabel').textContent = isRef ? 'Sonuç' : (isYerel || isCB || YEARS_NO_VEKIL.has(currentYear) ? 'Kazanan' : 'Milletvekili');
+      $('#tableTitle').textContent = 'Türkiye · '+DATA.ad+' · İl Sonuçları';
 
-    resetMapModeUI();
+      resetMapModeUI();
 
-    renderElectionBar();
-    renderNationalSummary();
-    renderYearPicker();
-    renderOylamaToggle();
-    renderSeatBar();
-    renderYurtdisiCard();
-    renderCountryMap();
-    renderTable();
+      renderElectionBar();
+      renderNationalSummary();
+      renderYearPicker();
+      renderOylamaToggle();
+      renderSeatBar();
+      renderYurtdisiCard();
+      renderCountryMap();
+      renderTable();
+      setResultsBusy(false);
+      clearLoadStatus();
+    }catch(error){
+      if(ticket !== loadYearTicket) return;
+      // Keep old results inert: they must not be mistaken for the requested election.
+      showLoadStatus('Seçim sonuçları yüklenemedi. Bağlantınızı kontrol edip yeniden deneyin.', () => loadYear(year));
+    }
   }
 
   $('#btnTurGenel').addEventListener('click', ()=> switchTur('genel'));

@@ -205,14 +205,8 @@
         row.addEventListener('mouseenter', ()=> pathByGeomId[d.geomId].classList.add('selected'));
         row.addEventListener('mouseleave', ()=> pathByGeomId[d.geomId].classList.remove('selected'));
       }
-      row.addEventListener('click', async ()=>{
-        if(!d.geomId) return;
-        selectDistrict(d, plaka);
-        if(mahalleGeoExistsForDistrict(d.geomId)){
-          const rows = await mahalleDataForDistrict(d.geomId);
-          if(rows){ renderMahalleMap(plaka, d.geomId, rows); return; }
-        }
-        if(pathByGeomId[d.geomId]) pathByGeomId[d.geomId].scrollIntoView({block:'nearest'});
+      row.addEventListener('click', ()=> {
+        if(d.geomId) openDistrict(plaka, d.geomId);
       });
       el.appendChild(row);
     }
@@ -276,6 +270,7 @@
   }
 
   function renderMeclisOverview(plaka){
+    cancelDistrictLoad();
     $('#dInfoNote').style.display='none';
     setHero('İlçe Meclisi', 'İlçe seçin', null, null);
     $('#dTurnout').textContent='—'; $('#dSecmen').textContent='—'; $('#dGecerli').textContent='—';
@@ -292,6 +287,7 @@
   }
 
   function renderMeclisIlceMap(plaka, geomId){
+    cancelDistrictLoad();
     const f = geoFeatureById[geomId];
     if(!f) return; // view SONRA degisir - basarisiz cagri onceki gorunumu bozmamali
     view = {level:'meclis-ilce', plaka, geomId};

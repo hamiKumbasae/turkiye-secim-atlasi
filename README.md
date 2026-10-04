@@ -28,7 +28,7 @@ GitHub Pages, Cloudflare Pages, Netlify gibi herhangi bir statik barındırma
 da doğrudan çalışır (build adımı gerekmez, `index.html` + `data/` + `geo/`
 zaten hazır commit'li).
 
-## Offline tek-dosya build (opsiyonel)
+## Ön yüzü tek HTML dosyasına derleme (opsiyonel)
 
 `build.py`, `src/index.template.html` + `src/styles/main.css` + `src/js/*.js`
 dosyalarını tek bir `index.html`'e birleştirir (CSS/JS gömülü, ama veri
@@ -59,7 +59,8 @@ data/mahalle_votes/<year>.json  Mahalle/muhtarlık düzeyi oy verisi olan
                              edilir.
 
 geo/il_sinirlari.geojson, ilce_sinirlari.geojson, ilce_sinirlari_hist.geojson,
-geo/mahalle_geo.json, geo/district_splits.json, geo/meclis_2024.json,
+geo/mahalle_geo.json (ilk uygun ilçe seçiminde yüklenir),
+geo/district_splits.json, geo/meclis_2024.json,
 geo/mahalle_coverage.json, geo/eras/<dönem>.geojson  Harita geometrisi.
 
 index.html (repo kökü)      build.py'nin çıktısı, commit'lenir.
@@ -78,3 +79,33 @@ Resmî YSK yayını değildir. Kaynak ayrıntıları ve metodoloji için sitedek
 ## Lisans
 
 MIT — bkz. [LICENSE](LICENSE).
+
+## Yükleme ve hata durumları
+
+Seçim sonucu ve dönem geometrisi birlikte yüklenir; hızlı seçim değişikliklerinde
+sadece son isteğin verileri ekrana uygulanır. Yükleme sırasında eski sonuçlar
+soluk ve etkileşimsiz tutulur; başka yıl veya seçim türü seçilebilir.
+Bağlantı hatalarında **Yeniden dene** aynı isteği sayfayı yenilemeden tekrarlar.
+
+`geo/mahalle_geo.json` açılışta indirilmez. Önce tıklanan ilçenin seçilen yılda
+mahalle oy verisi olup olmadığı kontrol edilir; varsa geometri ilk kez yüklenir
+ve oturum boyunca önbellekte tutulur. Şu an geometri ilçe dosyalarına bölünmüş
+değildir; ilk uygun ilçe seçiminde tüm geometri dosyası indirilir.
+
+## Otomatik testler
+
+Node.js 22+ ve Python 3 ile:
+
+```sh
+npm ci
+npx playwright install chromium
+python3 build.py
+npm test
+```
+
+Testler üretilmiş sayfayı Chromium'da gerçek repo verileriyle çalıştırır. Ağ
+istekleri yerel dosyalardan karşılanır; gecikme, bağlantı kopması ve HTTP hatası
+kontrollü olarak uygulanır. İlk yükleme, yeniden deneme, tarihsel/modern yıl
+geçişi, aynı dönem için eşzamanlı istekler, mahallelerin ihtiyaç anında yüklenmesi,
+eski mahalle yanıtının yeni seçimi bozmaması ve mobil hata akışı kapsanır.
+GitHub Actions aynı testleri push ve pull request olaylarında çalıştırır.
