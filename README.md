@@ -120,6 +120,27 @@ başkanlık/genel hattındaki kaynak eksikleri açıklamalı kalır.
 Bu yayın kopyası `export_static.py --public` ile üretilir; ham PDF ve
 mahalle atama kaynak tabloları burada yayımlanmaz.
 
-1961 genel seçimi için 21 ilçe daha kanun/sayım zincirleri ve açıklamalı
-yaklaşık çoğunluk yöntemiyle bağlandı; 23 ilçe belirsiz kalır. Ankara
-Merkez'in tarihî poligonu için ek kaynak gerekir.
+### 1961–2007 ilçe ve il sınırları
+
+- 1961–2007 genel seçimleri, 1961/1982/1987/1988/2007 referandumları ve 1963–2004 yerel
+  seçimlerinde (26 seçim) hiçbir bugünkü ilçe sonuçsuz (taralı) kalmıyor: sonradan kurulan
+  ilçeler o seçimdeki ilçelerinin poligonuna katılır. Kesin olmayan eşlemeler (birim
+  çoğunluğu, en büyük pay, komşuluk) kaynak depodaki tablolarda işaretlidir.
+- İstanbul 1961–1991 eski ilçe sınırlarıyla çizilir (mahalle düzeyinde; bir kısmı 1960 nüfus
+  sayımına göre yaklaşık).
+- Dönem il sınırları (`geo/eras/`) seçim verisindeki ilçe-il bağlılığından üretilir; il ve ilçe
+  haritası birebir örtüşür. Yanlış ilde görünen 13 ilçe düzeldi (ör. Cizre, İdil, Silopi →
+  Mardin; Beytüşşebap, Uludere → Hakkâri). Yeni dönemler: `era1957_1965` (Kaynarca Kocaeli'de)
+  ve `era1994` (Ardahan ve Iğdır ayrı il).
+- Veri düzeltmeleri: 1994/1999/2004 yerelde Artvin Hopa'nın çift satırı kaldırıldı; 1994 ve
+  1999 yerelde Kaynaşlı Bolu'da.
+
+### Bilinen eksikler
+
+- Her seçimde 15–20 civarı çok kaynaklı ilçe kaba kuralla tek ilçeye bağlı (köy düzeyinde
+  kaynak bulunursa bölünebilir).
+- Ankara Merkez (1961–1983) ayrı ilçeydi ama sınırı kaynakta yok; haritada poligonu yok.
+- 1984 ve 1994 yerel meclis haritalarında oy verisi eksik ilçeler var.
+- 1950–1957 il sınırları ve 2009 sonrası ilçe haritaları bu çalışmada denetlenmedi.
+- Veri kaynak depoda (`turkiye-secim-haritasi`) üretilir; orada değişince buraya
+  `export_static.py --public` ile ayrıca aktarılır.
