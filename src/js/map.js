@@ -86,7 +86,7 @@
   async function setMapMode(mode){
     if(mode==='degisim' && !(await ensureOnceki())) return;
     currentMapMode = mode;
-    $$('#modeGroup button').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
+    $$('#modeGroup button').forEach(b=>{ b.classList.toggle('active', b.dataset.mode===mode); b.setAttribute('aria-pressed', String(b.dataset.mode===mode)); });
     applyMapMode(); // #partySelect gorunurlugu de burada, mode'a gore ayarlanir
     durumuYaz();
   }

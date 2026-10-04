@@ -243,3 +243,28 @@ test('CSV download contains province and district rows of the open election', as
   assert.equal(lines.filter(l => l.startsWith('2023,il,')).length, 81);
   assert(lines.filter(l => l.startsWith('2023,ilçe,')).length > 900);
 });
+
+test('map regions are keyboard accessible and a colour-blind palette can be switched on', async t => {
+  const {page} = await setup(t);
+  await ready(page); await tick(page);
+  const ankara = page.locator('#mapSvg path[data-plaka="6"]');
+  assert.equal(await ankara.getAttribute('tabindex'), '0');
+  assert.match(await ankara.getAttribute('aria-label'), /^Ankara: .+ önde$/);
+  await ankara.focus(); await page.keyboard.press('Enter');
+  await page.locator('#mapSvg path[data-geom-id]').first().waitFor();
+  assert.match(await page.locator('#mapBreadcrumbName').textContent(), /Ankara/);
+  await page.locator('#btnBackCountry').click();
+  const before = await page.locator('#mapSvg path[data-plaka="6"]').getAttribute('fill');
+  await page.locator('#btnRenkKoru').click();
+  assert.equal(await page.locator('#btnRenkKoru').getAttribute('aria-pressed'), 'true');
+  const after = await page.locator('#mapSvg path[data-plaka="6"]').getAttribute('fill');
+  assert.notEqual(after, before);
+  assert.match(after, /^#(E69F00|0072B2|009E73|D55E00|56B4E9|CC79A7|F0E442|9a9a9a)$/);
+});
+
+test('phone width has no horizontal page scroll', async t => {
+  const {page} = await setup(t);
+  await page.setViewportSize({width:390, height:844});
+  await ready(page);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390);
+});
