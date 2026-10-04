@@ -36,11 +36,11 @@
     igm: 'YSK Açık Veri Portalı — il genel meclisi üyeliği oyları (sandık düzeyinden toplandı). İlçe sonucu ilçenin tamamıdır (beldeler dahil). 2014\'ten beri büyükşehirlerde il genel meclisi seçilmez (6360 sayılı Kanun).',
     bm: 'YSK Açık Veri Portalı — belediye meclisi üyeliği oyları (sandık düzeyinden toplandı). İlçe sonucu yalnız ilçe belediyesinin meclisidir, belde meclisleri hariç. İl sonucu ildeki bütün belediye meclislerinin toplamıdır.',
   };
-  async function oylamaKaydi(year, baskanKaydi, oylama){
+  async function oylamaKaydi(year, baskanKaydi, oylama, strict = false){
     if(baskanKaydi.tur !== 'yerel' || oylama === 'baskan') return baskanKaydi;
     const k = OYLAMA_YILLARI.has(year) ? await loadOylama(year, oylama) : null;
     if(k) return k;
-    return baskanKaydi;
+    return strict ? null : baskanKaydi;
   }
   function renderOylamaToggle(){
     const wrap = $('#oylamaToggle');

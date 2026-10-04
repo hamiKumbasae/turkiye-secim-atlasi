@@ -12,6 +12,8 @@
   };
 
   function sourceInfo(){
+    if(currentYear==='2004yerel' && !DATA.oylama) return {cat:'mixed',badge:'YSK + TÜİK',detail:'81 il ve 910 ilçe kaydı DİE 2004 tablolarıyla doğrulandı. Eşleşmeyen tarihsel kapsamlar ayrıca notlanır.'};
+    if(currentYear==='1957' || currentYear==='1961') return {cat:'mixed',badge:'YSK + İkincil Kaynak',detail:'Sakarya sandalye dağılımı ikincil arşivdeki parti tablosu ve seçilen vekiller listesiyle tamamlandı.'};
     if(DATA.oylama) return {cat:'full', badge: DATA.rozet || 'YSK Resmî Veri', detail: DATA.aciklama || OYLAMA_ACIKLAMA[DATA.oylama]};
     if(currentYear==='2014cb' || currentYear==='2007referandum')
       return {cat:'full', badge:'YSK Resmî Veri'};
@@ -70,6 +72,8 @@
     // etiketleri "Yurt İçi ..." yaparak yaniltici bir "ulusal toplam"
     // izlenimi vermiyoruz.
     const hasYurtdisi = hasYurtdisiData();
+    const localMayors = DATA.tur==='yerel' && !DATA.oylama && DATA.contestType!=='municipal_indirect';
+    const prefix = localMayors ? 'Gösterilen belediyelerde ' : '';
     const items = [
       [hasYurtdisi ? 'Yurt İçi Katılım' : 'Katılım', katilim!=null ? '%'+katilim.toFixed(2) : '—'],
       [hasYurtdisi ? 'Yurt İçi Seçmen' : 'Seçmen', secmen ? fmt(secmen) : '—'],
@@ -79,7 +83,7 @@
     items.push(['İl', iller.filter(i => i.kazanan || !i.not).length]);
 
     $('#nationalSummary').innerHTML = items.map(([l,v])=>
-      '<div class="ns-item"><div class="l">'+l+'</div><div class="v num">'+v+'</div></div>'
+      '<div class="ns-item"><div class="l">'+(l==='İl' ? l : prefix+l)+'</div><div class="v num">'+v+'</div></div>'
     ).join('');
   }
 
@@ -95,6 +99,12 @@
     html += '<div class="dr-row"><span>İlçe kayıtları (oy verisiyle)</span><span>'+lv.ilceWithData+' / '+lv.ilceTotal+'</span></div>';
     html += '<div class="dr-row"><span>Mahalle kırılımı olan ilçe</span><span>'+lv.mahalleDistricts+'</span></div>';
     html += '<div class="drawer-section-title">Kaynak ve metodoloji</div>';
+    if(src.detail) html += '<p>'+escapeHtml(src.detail)+'</p>';
+    const flagged = [...DATA.iller,...DATA.ilceler].filter(r=>r.veriNotu);
+    if(flagged.length) html += '<p>'+flagged.length+' kayıt kaynak doğrulaması bekliyor. Uyuşmayan oy toplamlarının yüzdeleri ve değişimleri gösterilmez; ham sayımlar ve kayıt notları korunur.</p>';
+    const repairs = new Map();
+    for(const r of [...DATA.iller,...DATA.ilceler]) if(r.duzeltmeKaynagi) repairs.set(r.duzeltmeKaynagi.url,r.duzeltmeKaynagi.aciklama);
+    for(const [url,note] of repairs) if(/^https:\/\//.test(url)) html += '<p><a href="'+escapeHtml(url)+'" target="_blank" rel="noopener">'+escapeHtml(note)+'</a></p>';
     html += '<p>Seçim sonuçları ağırlıklı olarak YSK ve diğer resmî kamu kaynaklarından derlenmiştir. Eksik tarihsel dönemlerde ikincil kaynaklardan yararlanılmıştır. Veriler yayın öncesinde normalize edilip doğrulama kontrollerinden geçirilir.</p>';
     html += '<p>Yurtdışı seçmen oyları hiçbir ile bağlı olmadığı için haritaya dahil edilmez, mevcut olduğu seçimlerde ayrı bir panelde gösterilir.</p>';
     html += '<p><a class="link-btn" href="yontem.html" style="text-decoration:underline;">Kaynaklar ve yöntem sayfası →</a> (dönem sınırları, harita modları, bilinen eksikler)</p>';
