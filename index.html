@@ -334,6 +334,7 @@
         <span id="sourceBadgeText">YSK Resmî Veri</span>
       </button>
       <button class="link-btn" id="btnKaynaklar">Kaynaklar →</button>
+      <button class="link-btn" id="btnPaylas" type="button" title="Bu görünümün (seçim, il, ilçe, harita modu) bağlantısını kopyalar">Bağlantıyı kopyala</button>
     </div>
   </div>
 
@@ -460,7 +461,7 @@
       · <a href="https://github.com/hamiKumbasae/turkiye-secim-atlasi" target="_blank" rel="noopener">GitHub</a>
     </div>
     <div class="footer-disclaimer">Veriler YSK, TÜİK, TBMM ve belgelenmiş diğer kaynaklardan derlenmiştir. Resmî YSK yayını değildir.</div>
-    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü 14eb2f02e8</div>
+    <div class="footer-disclaimer">Son güncelleme: 04.10.2026 · veri sürümü 4c43ed6a05</div>
   </footer>
 </div>
 
@@ -492,7 +493,7 @@
   // VERI_SURUMU: build.py'nin data/ + geo/ iceriginden hesapladigi ozet. Her istege ?v= olarak
   // eklenir: GitHub Pages dosyalari max-age=600 ile verdigi icin, yeni yayindan sonra sayfa
   // yenilendiginde tarayici eski (onbellekteki) veriyi kullanmasin.
-  const VERI_SURUMU = '14eb2f02e8';
+  const VERI_SURUMU = '4c43ed6a05';
   const FETCH_CACHE = {};
   function fetchJSON(path, fallback){
     if(!(path in FETCH_CACHE)){
@@ -1161,6 +1162,7 @@
     currentMapMode = mode;
     $$('#modeGroup button').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
     applyMapMode(); // #partySelect gorunurlugu de burada, mode'a gore ayarlanir
+    durumuYaz();
   }
   // council_seats/mixed (1950/1955 yerel): oy oranlari ile sandalye paylari
   // AYNI renk skalasinda karsilastirilamaz (biri gercek oy yuzdesi, digeri
@@ -1182,7 +1184,7 @@
     // yapmasin diye burada da korunur.
     b.addEventListener('click', ()=> { if(view.level!=='meclis-ilce') setMapMode(b.dataset.mode); });
   });
-  $('#partySelect').addEventListener('change', e=>{ if(view.level!=='meclis-ilce'){ currentMapParty = e.target.value; applyMapMode(); } });
+  $('#partySelect').addEventListener('change', e=>{ if(view.level!=='meclis-ilce'){ currentMapParty = e.target.value; applyMapMode(); durumuYaz(); } });
 
   // hex/renk stringini hue'ya cevirir (parti oran gradyani icin) - canvas
   // normalizasyonu kullanir, boylece partiler.json'daki her renk formati
@@ -1238,6 +1240,7 @@
     $('#mapTitleCountry').style.display='block';
     $('#searchBox').placeholder='İl ara…';
     applyMapMode();
+    durumuYaz();
   }
 
   async function mahalleDataForDistrict(geomId, year, oylama){
@@ -1411,6 +1414,8 @@
     $('#searchBox').value='';
     $('#searchBox').placeholder='İlçe ara…';
     applyMapMode();
+    seciliIlce = null;
+    durumuYaz();
   }
 
   function drillIntoProvince(plaka){
@@ -1485,6 +1490,7 @@
     $('#searchBox').value='';
     $('#searchBox').placeholder='Mahalle ara…';
     applyMapMode();
+    durumuYaz();
   }
 
   // ---------------- map coloring modes ----------------
@@ -1756,6 +1762,8 @@
 
   function selectProvince(plaka){
     selectedPlaka = plaka;
+    seciliIlce = null;
+    durumuYaz();
     detailView = 'baskanlik';
     $$('.geo-path').forEach(p=>p.classList.toggle('selected', +p.dataset.plaka===plaka));
     const p = ilByPlaka[plaka]; if(!p) return;
@@ -1934,6 +1942,8 @@
   }
 
   function selectDistrict(d, plaka){
+    seciliIlce = d.geomId || null;
+    durumuYaz();
     $$('.geo-path').forEach(p=>p.classList.toggle('selected', p.dataset.geomId===d.geomId));
     $$('.district-row').forEach(r=>r.classList.toggle('dselected', r.dataset.geomId===d.geomId));
     const p = ilByPlaka[plaka];
@@ -2200,6 +2210,80 @@
   }
 
 
+  // ---------------- paylasilabilir baglanti ----------------
+  // Gorunum adres cubugundaki # kisminda tutulur: #secim=1977&il=6&ilce=TR-D-06-001&mod=parti&parti=CHP
+  // (yerel secimde &oylama=igm|bm). Bu baglantiyla acilan sayfa ayni gorunume gider. Adres
+  // replaceState ile guncellenir (her tiklama tarayici gecmisine eklenmez).
+  const MODLAR = ['winner', 'katilim', 'parti', 'degisim'];
+  let baglantiUygulaniyor = false;
+  let seciliIlce = null; // panelde secili ilce (geomId); selectDistrict ayarlar
+
+  function durumParametreleri(){
+    const q = new URLSearchParams();
+    if(!currentYear) return q;
+    q.set('secim', currentYear);
+    if(currentTur === 'yerel' && currentOylama && currentOylama !== 'baskan') q.set('oylama', currentOylama);
+    const il = view.level === 'country' ? selectedPlaka : view.plaka;
+    if(il) q.set('il', il);
+    const ilce = view.level === 'mahalle' || view.level === 'meclis-ilce' ? view.geomId : (view.level === 'province' ? seciliIlce : null);
+    if(il && ilce) q.set('ilce', ilce);
+    if(currentMapMode && currentMapMode !== 'winner'){
+      q.set('mod', currentMapMode);
+      if((currentMapMode === 'parti' || currentMapMode === 'degisim') && currentMapParty) q.set('parti', currentMapParty);
+    }
+    return q;
+  }
+  function durumuYaz(){
+    if(baglantiUygulaniyor || !currentYear) return;
+    const hash = '#' + durumParametreleri().toString();
+    if(location.hash !== hash) history.replaceState(null, '', hash);
+  }
+
+  // Acilista (ve adres elle degistirildiginde) baglantidaki gorunume gider; gecersiz ya da eksik
+  // parametreler yok sayilir.
+  async function baglantiyiUygula(){
+    const q = new URLSearchParams(location.hash.slice(1));
+    const secim = q.get('secim');
+    const tur = secim && Object.keys(TUR_YEARS).find(t => TUR_YEARS[t].includes(secim));
+    baglantiUygulaniyor = true;
+    try{
+      if(!tur){ await switchTur('genel'); return; }
+      const oylama = q.get('oylama');
+      currentOylama = ['igm', 'bm'].includes(oylama) ? oylama : 'baskan';
+      await switchTur(tur, secim);
+      if(currentYear !== secim) return; // yuklenemedi ya da bu arada baska secim secildi
+      const parti = q.get('parti');
+      if(parti && MAJOR.includes(parti)){ currentMapParty = parti; $('#partySelect').value = parti; }
+      const mod = q.get('mod');
+      const dugme = MODLAR.includes(mod) && $('#modeGroup button[data-mode="' + mod + '"]');
+      if(dugme && !dugme.hidden && mod !== 'winner') await setMapMode(mod);
+      const il = parseInt(q.get('il'), 10);
+      if(il && ilByPlaka[il]){
+        await goToProvince(il);
+        const ilce = q.get('ilce');
+        if(ilce && view.level === 'province' && districtByGeomId[ilce]) await openDistrict(il, ilce);
+      }
+    }finally{
+      baglantiUygulaniyor = false;
+      durumuYaz();
+    }
+  }
+  window.addEventListener('hashchange', () => {
+    if(!baglantiUygulaniyor && location.hash !== '#' + durumParametreleri().toString()) baglantiyiUygula();
+  });
+
+  $('#btnPaylas').addEventListener('click', async () => {
+    durumuYaz();
+    const btn = $('#btnPaylas');
+    try{
+      await navigator.clipboard.writeText(location.href);
+      btn.textContent = 'Bağlantı kopyalandı ✓';
+    }catch(error){
+      window.prompt('Bu görünümün bağlantısı:', location.href);
+    }
+    setTimeout(() => { btn.textContent = 'Bağlantıyı kopyala'; }, 2000);
+  });
+
   // ---------------- theme change redraw ----------------
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
     if(!DATA) return;
@@ -2226,14 +2310,14 @@
     if(active) active.scrollIntoView({inline:'center', block:'nearest'});
   }
 
-  function switchTur(tur){
+  function switchTur(tur, year){
     currentTur = tur;
     $('#btnTurGenel').classList.toggle('active', tur==='genel');
     $('#btnTurReferandum').classList.toggle('active', tur==='referandum');
     $('#btnTurYerel').classList.toggle('active', tur==='yerel');
     $('#btnTurCB').classList.toggle('active', tur==='cumhurbaskanligi');
     renderYearPicker();
-    loadYear(TUR_YEARS[tur][0]);
+    return loadYear(year || TUR_YEARS[tur][0]);
   }
 
   // Fetch async oldugu icin hizli art arda yil degistirmede eski istek gec
@@ -2293,6 +2377,7 @@
       clearLoadStatus();
       // ilk ile inmeden once ilce sinirlarini arka planda indir (hata olursa ile inerken yeniden denenir)
       setTimeout(() => ensureIlceGeo().catch(() => {}), 0);
+      durumuYaz();
     }catch(error){
       if(ticket !== loadYearTicket) return;
       // Keep old results inert: they must not be mistaken for the requested election.
@@ -2305,7 +2390,7 @@
   $('#btnTurYerel').addEventListener('click', ()=> switchTur('yerel'));
   $('#btnTurCB').addEventListener('click', ()=> switchTur('cumhurbaskanligi'));
 
-  switchTur('genel');
+  baglantiyiUygula(); // adresteki #secim=... gorunumu, yoksa son genel secim
 
 })();
 </script>

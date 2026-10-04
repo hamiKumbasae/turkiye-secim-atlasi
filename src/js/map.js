@@ -88,6 +88,7 @@
     currentMapMode = mode;
     $$('#modeGroup button').forEach(b=>b.classList.toggle('active', b.dataset.mode===mode));
     applyMapMode(); // #partySelect gorunurlugu de burada, mode'a gore ayarlanir
+    durumuYaz();
   }
   // council_seats/mixed (1950/1955 yerel): oy oranlari ile sandalye paylari
   // AYNI renk skalasinda karsilastirilamaz (biri gercek oy yuzdesi, digeri
@@ -109,7 +110,7 @@
     // yapmasin diye burada da korunur.
     b.addEventListener('click', ()=> { if(view.level!=='meclis-ilce') setMapMode(b.dataset.mode); });
   });
-  $('#partySelect').addEventListener('change', e=>{ if(view.level!=='meclis-ilce'){ currentMapParty = e.target.value; applyMapMode(); } });
+  $('#partySelect').addEventListener('change', e=>{ if(view.level!=='meclis-ilce'){ currentMapParty = e.target.value; applyMapMode(); durumuYaz(); } });
 
   // hex/renk stringini hue'ya cevirir (parti oran gradyani icin) - canvas
   // normalizasyonu kullanir, boylece partiler.json'daki her renk formati
@@ -165,6 +166,7 @@
     $('#mapTitleCountry').style.display='block';
     $('#searchBox').placeholder='İl ara…';
     applyMapMode();
+    durumuYaz();
   }
 
   async function mahalleDataForDistrict(geomId, year, oylama){
@@ -338,6 +340,8 @@
     $('#searchBox').value='';
     $('#searchBox').placeholder='İlçe ara…';
     applyMapMode();
+    seciliIlce = null;
+    durumuYaz();
   }
 
   function drillIntoProvince(plaka){
@@ -412,6 +416,7 @@
     $('#searchBox').value='';
     $('#searchBox').placeholder='Mahalle ara…';
     applyMapMode();
+    durumuYaz();
   }
 
   // ---------------- map coloring modes ----------------

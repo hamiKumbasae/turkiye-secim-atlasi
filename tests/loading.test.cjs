@@ -207,3 +207,25 @@ test('change mode compares with the previous election of the same type', async t
   await year(page, '1950'); await ready(page);
   assert.equal(await page.locator('#modeGroup button[data-mode="degisim"]').isHidden(), true);
 });
+
+test('the address keeps the view and a shared link opens it again', async t => {
+  const {page} = await setup(t);
+  await ready(page);
+  await year(page, '1977'); await ready(page);
+  await page.locator('#modeGroup button[data-mode="parti"]').click();
+  await page.locator('#partySelect').selectOption('CHP');
+  await page.locator('#mapSvg path[data-plaka="6"]').click();
+  await page.locator('#mapSvg path[data-geom-id]').first().waitFor();
+  const hash = new URL(page.url()).hash;
+  assert.match(hash, /secim=1977/); assert.match(hash, /il=6/); assert.match(hash, /mod=parti/); assert.match(hash, /parti=CHP/);
+
+  const other = page; // ayni yonlendirmeyle sifirdan ac
+  await other.goto('about:blank');
+  await other.goto('http://atlas.test/' + hash);
+  await other.locator('#results[aria-busy="false"]').waitFor();
+  await other.locator('#mapSvg path[data-geom-id]').first().waitFor();
+  assert.equal(await other.locator('#yearPicker .active').textContent(), '1977');
+  assert.equal(await other.locator('#partySelect').inputValue(), 'CHP');
+  assert.equal(await other.locator('#modeGroup button.active').getAttribute('data-mode'), 'parti');
+  assert.match(await other.locator('#mapBreadcrumbName').textContent(), /Ankara/);
+});
