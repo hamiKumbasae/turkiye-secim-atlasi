@@ -268,3 +268,65 @@ test('phone width has no horizontal page scroll', async t => {
   await ready(page);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390);
 });
+
+test('council votes have an accurate national chart and no mayor fallback in 1984', async t => {
+  const {page,requests}=await setup(t); await ready(page); await page.locator('#btnTurYerel').click(); await ready(page);
+  await page.locator('#oylamaToggle [data-oylama="bm"]').click(); await ready(page);
+  assert.equal(await page.locator('#seatbarTitle').textContent(),'Belediye Meclisleri Oy Dağılımı');
+  assert(!/başkanlığı/.test(await page.locator('#majoritySub').textContent()));
+  await year(page,'1984'); await ready(page);
+  assert.equal(await page.locator('#modeGroup [data-mode="degisim"]').isHidden(),true);
+  assert(!requests.includes('data/elections/1977yerel.json'));
+});
+
+test('district council tooltips and accessible palette retain council seats', async t => {
+  const {page}=await setup(t); await ready(page); await page.locator('#btnTurYerel').click(); await ready(page);
+  await page.locator('#mapSvg path[data-plaka="6"]').dispatchEvent('click');
+  await page.locator('#detailViewToggle [data-view="meclis"]').click();
+  await page.locator('#dDistrictList .district-row[data-geom-id="TR-D-06-001"]').click();
+  const polygon=page.locator('#mapSvg path[data-geom-id="TR-D-06-001"]');
+  await polygon.dispatchEvent('mousemove',{clientX:300,clientY:300});
+  assert.match(await page.locator('#tooltip').textContent(),/22 \/ 30 sandalye/);
+  assert(!/oy|başkan/.test(await page.locator('#tooltip').textContent()));
+  await page.locator('#btnRenkKoru').click();
+  assert.equal(await page.locator('#modeGroup').isHidden(),true);
+  await polygon.dispatchEvent('mousemove',{clientX:300,clientY:300});
+  assert.match(await page.locator('#tooltip').textContent(),/22 \/ 30 sandalye/);
+});
+
+test('unresolved vote totals do not show invented percentages', async t => {
+  const {page}=await setup(t,async(name,route)=>{
+    if(name!=='data/elections/2023.json') return false;
+    const d=JSON.parse(await fs.readFile(path.join(root,name),'utf8'));
+    const r=d.iller.find(x=>x.plaka===1); r.gecerliOy+=100000;
+    await route.fulfill({contentType:'application/json',body:JSON.stringify(d)}); return true;
+  });
+  await ready(page); await page.locator('#mapSvg path[data-plaka="1"]').dispatchEvent('click');
+  assert.match(await page.locator('#dInfoNote').textContent(),/uyuşmuyor/);
+  assert(!/%\d/.test(await page.locator('#dParties').textContent()));
+});
+
+test('council comparison fails closed if the matching ballot file is absent', async t=>{
+ const {page}=await setup(t,async(name,route)=>{
+  if(name!=='data/meclis_harita/2019yerel_bm.json') return false;
+  await route.fulfill({status:404,body:'missing'});return true;
+ });
+ await ready(page);await page.locator('#btnTurYerel').click();await ready(page);
+ await page.locator('#oylamaToggle [data-oylama="bm"]').click();await ready(page);
+ await page.locator('#modeGroup [data-mode="degisim"]').click();
+ assert.equal(await page.locator('#modeGroup button.active').getAttribute('data-mode'),'winner');
+ await page.waitForFunction(()=>document.querySelector('#loadMessage').textContent.includes('bulunamadı'));
+ assert.match(await page.locator('#loadMessage').textContent(),/bulunamadı/);
+});
+
+test('a late change comparison cannot override a newer winner-mode selection', async t=>{
+ let release;
+ const {page}=await setup(t,async(name,route,serve)=>{
+  if(name!=='data/elections/2018.json') return false;
+  await new Promise(resolve=>release=resolve);await serve();return true;
+ });
+ await ready(page);await page.locator('#modeGroup [data-mode="degisim"]').click();
+ while(!release) await tick(page);
+ await page.locator('#modeGroup [data-mode="winner"]').click();release();await tick(page);await tick(page);
+ assert.equal(await page.locator('#modeGroup button.active').getAttribute('data-mode'),'winner');
+});

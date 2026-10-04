@@ -81,9 +81,43 @@
   function loadMahalleGeometry(geomId){
     return fetchJSON("geo/mahalle/"+encodeURIComponent(geomId)+".json");
   }
+  function prepareElection(data){
+    if(!data || data._validated) return data;
+    const geomCounts = {};
+    for(const row of data.ilceler||[]) if(row.geomId) geomCounts[row.geomId]=(geomCounts[row.geomId]||0)+1;
+    for(const row of [...(data.iller||[]), ...(data.ilceler||[])]){
+      const values = Object.values(row.oy||{});
+      const total = values.reduce((s,v)=>s+(v.oy||0),0);
+      if(row.gecerliOy && values.length && values.every(v=>v.oy!=null) &&
+         Math.abs(total-row.gecerliOy)>Math.max(1,row.gecerliOy*0.0001)){
+        row.veriNotu = [row.veriNotu, 'Parti oyları toplamı ('+fmt(total)+') ile geçerli oy ('+fmt(row.gecerliOy)+') uyuşmuyor. Yüzdeler ve değişim karşılaştırması doğrulanana kadar gösterilmiyor.'].filter(Boolean).join(' ');
+        row.yuzdeDogrulanmadi = true;
+        for(const result of values) result.yuzdeDogrulanmadi = true;
+      }
+      if(row.gecerliOy && values.length && values.every(v=>v.oy!=null) &&
+         Math.abs(total-row.gecerliOy)<=Math.max(1,row.gecerliOy*0.0001) &&
+         values.some(v=>v.oran!=null && Math.abs(v.oran-v.oy/row.gecerliOy*100)>0.11)){
+        row.veriNotu = [row.veriNotu,'Kaynak yüzdeleri oy sayımlarına uymuyor; yüzdeler doğrulama bekliyor.'].filter(Boolean).join(' ');
+        row.yuzdeDogrulanmadi=true;
+        for(const result of values) result.yuzdeDogrulanmadi=true;
+      }
+      if(row.geomId && geomCounts[row.geomId]>1){
+        row.veriNotu = [row.veriNotu,'Aynı harita bölgesine birden fazla kayıt eşleşiyor; yüzdeler doğrulama bekliyor.'].filter(Boolean).join(' ');
+        for(const result of values) result.yuzdeDogrulanmadi=true;
+        row.yuzdeDogrulanmadi=true;
+      }
+      if(row.ilceGeneliSonuc) row.veriNotu = [row.veriNotu, 'Belediye kapsamı doğrulanmadı: '+row.ilceGeneliSonuc].filter(Boolean).join(' ');
+      if(row.secmen && row.gecerliOy>row.secmen){
+        row.veriNotu = [row.veriNotu, 'Geçerli oy seçmen sayısını aşıyor; sayımlar kaynak doğrulaması bekliyor. Katılım gösterilmiyor.'].filter(Boolean).join(' ');
+        row.katilim = null;
+      }
+    }
+    data._validated = true;
+    return data;
+  }
   async function fetchElection(year){
     if(!(year in BUNDLE.secimler)) BUNDLE.secimler[year] = await fetchJSON("data/elections/"+year+".json");
-    return BUNDLE.secimler[year];
+    return prepareElection(BUNDLE.secimler[year]);
   }
   function loadMahalleVotesForYear(year){
     // Mahalle verisi olmayan yillarda (ornegin 1968 yerel) istek hic atilmaz.
@@ -132,5 +166,5 @@
   }
   // yerel secim meclis kayitlari (il genel meclisi / belediye meclisi): bkz. election-config.js
   function loadOylama(year, kisa){
-    return fetchJSON("data/meclis_harita/"+year+"_"+kisa+".json", null);
+    return fetchJSON("data/meclis_harita/"+year+"_"+kisa+".json", null).then(prepareElection);
   }

@@ -162,3 +162,28 @@ mahalle atama kaynak tabloları burada yayımlanmaz.
 - 1950–1957 il sınırları ve 2009 sonrası ilçe haritaları bu çalışmada denetlenmedi.
 - Veri kaynak depoda (`turkiye-secim-haritasi`) üretilir; orada değişince buraya
   `export_static.py --public` ile ayrıca aktarılır.
+
+## Veri kontrolleri ve kaynakla yapılan onarımlar
+
+`python3 scripts/validate_data.py` yüzde/katılım aralığını, oy sayımlarını,
+oy kapsamını, aynı bölgeye yinelenen kayıtları ve ulusal sandalye toplamını
+kontrol eder. CI bu kontrolü build ve tarayıcı testlerinden önce çalıştırır.
+`data/validation/known-issues.json` mevcut kaynak sorunlarının kayıt bazında
+parmak izlerini içerir; yeni veya değişmiş sorunlar CI'ı durdurur. Bu liste
+verinin bütünüyle doğrulandığı anlamına gelmez. Sorunlu satırlar arayüzde
+notlanır ve yüzdeleri karşılaştırma dışında tutulur. Baseline otomatik
+olarak yenilenmemelidir; her yeni istisna kaynak incelemesi gerektirir.
+
+2004 belediye başkanlığı kayıtları DİE yayın no. 2935, s. 255–389 tabloları
+ile onarıldı. Kullanılan temiz tablo arşivi kaynak deponun
+`b552dadea7802009747e804a1fe927dc25948fec` revizyonundaki
+`data/kaynaklar/tuik/yerel/2004yerel/` dizinidir. Her değişen kayıtta
+`duzeltmeKaynagi` ve kullanılan sayfa bulunur. Sakarya 1957/1961 sandalye
+kaynakları aynı alan üzerinden ikincil kaynak olarak açıkça belirtilir.
+YSK'den eklenen Tillo/Karaisalı kayıtları seçim, pusula, il ve ilçe sorgu
+kimliklerini taşır; bağımsız toplamı ile aday oyları çift sayılmaz.
+Kaynakta doğrulanamayan katılım `kaynakKatilim` alanında korunur.
+
+Kaynak depodan yeni statik export almak bu onarımları üzerine yazabilir.
+Export sonrasında veri kontrolleri ve `npm test` çalıştırılmalı; onarımlar
+kaynak pipeline'a taşınmadan regresyon fixture'ları kaldırılmamalıdır.

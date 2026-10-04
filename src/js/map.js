@@ -83,8 +83,11 @@
     currentMapParty = MAJOR[0] || null;
     sel.value = currentMapParty;
   }
+  let mapModeTicket = 0;
   async function setMapMode(mode){
+    const ticket = ++mapModeTicket;
     if(mode==='degisim' && !(await ensureOnceki())) return;
+    if(ticket!==mapModeTicket) return;
     currentMapMode = mode;
     $$('#modeGroup button').forEach(b=>{ b.classList.toggle('active', b.dataset.mode===mode); b.setAttribute('aria-pressed', String(b.dataset.mode===mode)); });
     applyMapMode(); // #partySelect gorunurlugu de burada, mode'a gore ayarlanir
@@ -429,6 +432,11 @@
     return 'hsl('+hue+' '+s+'% '+l+'%)';
   }
   function applyMapMode(){
+    if(view.level==='meclis-ilce'){
+      const m = MECLIS_2024[view.geomId], el = pathByGeomId[view.geomId];
+      if(el) el.setAttribute('fill', m ? partyColor(m.kazanan) : 'var(--map-empty)');
+      return;
+    }
     const mode = currentMapMode;
     // Bu fonksiyon sadece Kazanan/Katilim/Parti modlarini destekleyen
     // gorunumlerden (ulke/il/mahalle) cagrilir - meclis-ilce gorunumu bu
@@ -490,7 +498,8 @@
   function oncekiSecimAnahtari(){
     const order = TUR_YEARS[currentTur] || [];
     const i = order.indexOf(currentYear);
-    return i >= 0 && i + 1 < order.length ? order[i + 1] : null;
+    const previous = i>=0 ? order.slice(i+1) : [];
+    return DATA.oylama ? previous.find(y=>OYLAMA_YILLARI.has(y)) || null : previous[0] || null;
   }
   // true: ONCEKI hazir; false: onceki secim yok, yuklenemedi ya da bu arada secim degisti
   async function ensureOnceki(){
@@ -502,7 +511,13 @@
     const stillCurrent = () => ticket === oncekiTicket && yearTicket === loadYearTicket;
     showLoadStatus('Önceki seçim yükleniyor…');
     try{
-      const kayit = await oylamaKaydi(year, await fetchElection(year), oylama);
+      const kayit = await oylamaKaydi(year, await fetchElection(year), oylama, true);
+      if(!kayit || (kayit.oylama||'baskan')!==oylama ||
+         (kayit.contestType||null)!==(DATA.contestType||null) ||
+         (kayit.resultBasis||null)!==(DATA.resultBasis||null)){
+        if(stillCurrent()) showLoadStatus('Aynı oy pusulası ve sonuç temeliyle önceki seçim bulunamadı.');
+        return false;
+      }
       if(!stillCurrent()) return false;
       const ilceByGeomId = {};
       for(const d of kayit.ilceler || []){ if(d.geomId) ilceByGeomId[d.geomId] = d; }
@@ -524,7 +539,7 @@
   // yuzde puan farki; parti ya da yer onceki secimde yoksa null
   function degisimDegeri(e, key){
     const o = oncekiKarsiligi(e);
-    if(!o || !o.oy || !e.oy) return null;
+    if(!o || !o.oy || !e.oy || o.ilceGeneliSonuc || e.ilceGeneliSonuc) return null;
     const a = resultPercent(e.oy[key]), b = resultPercent(o.oy[key]);
     return a == null || b == null ? null : a - b;
   }
